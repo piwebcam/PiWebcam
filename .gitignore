@@ -1,0 +1,6 @@
+.DS_Store 
+*.autosave 
+*.save
+*~
+ssh
+wpa_supplicant.conf
