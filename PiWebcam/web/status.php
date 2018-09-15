@@ -76,10 +76,13 @@
 													<dt>WiFI Network</dt>
 													<dd><?php print $status["WIFI_SSID"] ?></dd>
 													
-													<dt>WiFI Signal Level</dt>
+													<dt>WiFI Signal</dt>
 													<dd>
 														<div class="progress">
-															<div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="<?php print $status["WIFI_SIGNAL"] ?>%" aria-valuemin="0" aria-valuemax="100" style="width: <?php print $status["WIFI_SIGNAL"] ?>%;"><?php print $status["WIFI_SIGNAL"] ?>%
+															<div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="<?php print $status["WIFI_LINK_QUALITY"] ?>%" aria-valuemin="0" aria-valuemax="100" style="width: <?php print $status["WIFI_LINK_QUALITY"] ?>%;">
+															<?php 
+															if (array_key_exists("WIFI_SIGNAL_LEVEL",$status)) print $status["WIFI_SIGNAL_LEVEL"]." dBm";
+															?>
 															</div>
 														</div>
 													</dd>

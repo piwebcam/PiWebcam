@@ -1277,16 +1277,17 @@ if [ "$1" = "status" ]; then
 	echo "NETWORK_INTERNET="$(eval $INTERNET)
 	if iwconfig $IFACE|grep -q "Mode:Master"; then
 		echo "WIFI_SSID="`cat $AP_CONFIG |grep ^ssid|cut -d "=" -f2`
-		echo "WIFI_SIGNAL=100"
+		echo "WIFI_LINK_QUALITY=100"
 	else
 		if iwconfig $IFACE|grep -q "ESSID:off/any"; then
 			echo "WIFI_SSID=None"
-			echo "WIFI_SIGNAL=0"
+			echo "WIFI_LINK_QUALITY=0"
 		else
 			echo "WIFI_SSID="`iwconfig $IFACE | grep ESSID | cut -d '"' -f 2`
 			S1=`iwconfig $IFACE | awk '{if ($1=="Link"){split($2,A,"/");print A[1]}}'|sed 's/Quality=//g'`
 			S2=`iwconfig $IFACE | awk '{if ($1=="Link"){split($2,A,"/");print A[2]}}'`
-			echo "WIFI_SIGNAL="$(($S1*100/$S2))
+			echo "WIFI_LINK_QUALITY="$(($S1*100/$S2))
+			echo "WIFI_SIGNAL_LEVEL="`iwconfig $IFACE | awk '{if ($3=="Signal"){split($4,A,"=");print A[2]}}'`
 		fi
 	fi
 	echo "DISK_ROM="`df |grep '/overlay/lower$'|awk '{print $5}'|sed 's/%//'`
