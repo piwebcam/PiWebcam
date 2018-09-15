@@ -168,7 +168,7 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
                 <div class="col-lg-12">
                     <h1 class="page-header">
 					<img class="logo" src="images/logo.png"> 
-					<?php print $config["NAME"]; ?>
+					<?php print $config["DEVICE_NAME"]; ?>
 					</h1>
                 </div>
             </div>

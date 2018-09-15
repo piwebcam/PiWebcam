@@ -3,10 +3,10 @@
 	// form submitted
 	if(count($_REQUEST) > 0) {
 		if (array_key_exists("WIFI_MODE",$_REQUEST)) run("set_wifi_mode '".$_REQUEST["WIFI_MODE"]."'");
-		if (array_key_exists("AP_PASSPHRASE",$_REQUEST)) run("set_wifi_ap '".$_REQUEST["AP_PASSPHRASE"]."'");
-		if (array_key_exists("WIFI_SSID",$_REQUEST)) run("set_wifi_client '".$_REQUEST["WIFI_SSID"]."' '".$_REQUEST["WIFI_PASSPHRASE"]."'");
+		if (array_key_exists("WIFI_AP_PASSPHRASE",$_REQUEST)) run("set_wifi_ap '".$_REQUEST["WIFI_AP_PASSPHRASE"]."'");
+		if (array_key_exists("WIFI_CLIENT_SSID",$_REQUEST)) run("set_wifi_client '".$_REQUEST["WIFI_CLIENT_SSID"]."' '".$_REQUEST["WIFI_CLIENT_PASSPHRASE"]."'");
 		if (array_key_exists("NETWORK_IP",$_REQUEST)) run("set_network_ip '".$_REQUEST["NETWORK_IP"]."' '".$_REQUEST["NETWORK_GW"]."' '".$_REQUEST["NETWORK_DNS"]."'");
-		if (array_key_exists("REMOTE_ACCESS",$_REQUEST)) run("set_remote_access '".$_REQUEST["REMOTE_ACCESS"]."'");
+		if (array_key_exists("NETWORK_REMOTE_ACCESS",$_REQUEST)) run("set_network_remote_access '".$_REQUEST["NETWORK_REMOTE_ACCESS"]."'");
 		run("configure_network");
 		load_config();
 		array_push($message["success"],"Configuration applied successfully");
@@ -33,7 +33,7 @@
 														<label>
 															<input name="WIFI_MODE" value="AP" type="radio"<?php if ($config["WIFI_MODE"] === "AP" || $config["WIFI_MODE"] === "") print " checked"?> onclick='$("#ap_panel").removeClass("hidden");$("#client_panel").addClass("hidden"); $("#network_panel :input").prop("disabled",1);'>Access Point
 															<p class="help-block">Act as an access point with SSID <i>
-															"<?php print $config["NAME"] ?>"</i></p>
+															"<?php print $config["DEVICE_NAME"] ?>"</i></p>
 														</label>
 													</div>
 													<div class="radio">
@@ -46,19 +46,19 @@
 												<div id="ap_panel" class="<?php if ($config["WIFI_MODE"] === "CLIENT") print " hidden"?>">
 												<div class="form-group">
 													<label>Access Point Passphrase</label>
-													<input name="AP_PASSPHRASE" type="password" class="form-control" value="<?php print $config["AP_PASSPHRASE"]?>">
+													<input name="WIFI_AP_PASSPHRASE" type="password" class="form-control" value="<?php print $config["WIFI_AP_PASSPHRASE"]?>">
 													<p class="help-block">The passphrase to use when connecting to this access point (minimum 8 characters). Leave it empty for no password</p>
 												</div>
 												</div>
 												<div id="client_panel" class="<?php if ($config["WIFI_MODE"] != "CLIENT") print " hidden"?>">
 												<div class="form-group">
 													<label>WiFi network</label>
-													<input name="WIFI_SSID" class="form-control" value="<?php print $config["WIFI_SSID"]?>">
+													<input name="WIFI_CLIENT_SSID" class="form-control" value="<?php print $config["WIFI_CLIENT_SSID"]?>">
 													<p class="help-block">The name of the wireless network (SSID) to connect to</p>
 												</div>
 												<div class="form-group">
 													<label>Passphrase</label>
-													<input name="WIFI_PASSPHRASE" type="password" class="form-control" value="<?php print $config["WIFI_PASSPHRASE"]?>">
+													<input name="WIFI_CLIENT_PASSPHRASE" type="password" class="form-control" value="<?php print $config["WIFI_CLIENT_PASSPHRASE"]?>">
 													<p class="help-block">The passphrase to use to connect to the network. Leave it empty for open networks</p>
 												</div>
 												</div>
@@ -95,10 +95,10 @@
 												<h3>Remote Access</h3>
 												<div class="checkbox">
 													<label>
-														<input type='hidden' value="0" name="REMOTE_ACCESS">
-														<input value="1" name="REMOTE_ACCESS" type="checkbox"<?php if ($config["REMOTE_ACCESS"] === "1") print " checked"; ?>>Allow remote Internet access
+														<input type='hidden' value="0" name="NETWORK_REMOTE_ACCESS">
+														<input value="1" name="NETWORK_REMOTE_ACCESS" type="checkbox"<?php if ($config["NETWORK_REMOTE_ACCESS"] === "1") print " checked"; ?>>Allow remote Internet access
 													<p class="help-block">If checked, the device will be recheable from the Internet at the following URL: <b><a target="_blank" href="http://
-													<?php print strtolower($config["NAME"]) ?>.serveo.net">http://<?php print strtolower($config["NAME"]) ?>.serveo.net</a></b><br>
+													<?php print strtolower($config["DEVICE_NAME"]) ?>.serveo.net">http://<?php print strtolower($config["DEVICE_NAME"]) ?>.serveo.net</a></b><br>
 													Please ensure a strong password is set before proceeding.</p>
 													</label>
 												</div>

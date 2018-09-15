@@ -23,7 +23,7 @@ fi
 
 # exported variables will be made available in the web interface inside $env
 export MY_NAME="PiWebcam"
-export MY_VERSION="1.0"
+export MY_VERSION="1.1-dev"
 # location of this script
 export MY_DIR="/boot/$MY_NAME"
 export MY_FILE="$MY_DIR/$MY_NAME.sh"
@@ -253,51 +253,123 @@ function load_config {
 # save configuration to file
 function save_config {
 	# set default name if not set
-	if [[ -z "$NAME" ]]; then
-		NAME="$DEFAULT_NAME"
+	if [[ -z "$DEVICE_NAME" ]]; then
+		DEVICE_NAME="$DEFAULT_NAME"
 	fi
 	# set default password if not set
-	if [[ -z "$PASSWORD" ]]; then
-		PASSWORD="$DEFAULT_PASSWORD"
+	if [[ -z "$DEVICE_PASSWORD" ]]; then
+		DEVICE_PASSWORD="$DEFAULT_PASSWORD"
 	fi
 	# start in AP mode if no mode is set
 	if [[ -z "$WIFI_MODE" ]]; then
 		WIFI_MODE="AP"
-		AP_PASSPHRASE="$DEFAULT_PASSWORD"
+		WIFI_AP_PASSPHRASE="$DEFAULT_PASSWORD"
+	fi
+	if [[ -z "$NETWORK_REMOTE_ACCESS" ]]; then
+		NETWORK_REMOTE_ACCESS=0
+	fi
+	# set default settings for the camera
+	if [[ -z "$CAMERA_RESOLUTION" ]]; then
+		CAMERA_RESOLUTION="640x480"
+	fi
+	if [[ -z "$CAMERA_ROTATE" ]]; then
+		CAMERA_ROTATE=0
+	fi
+	if [[ -z "$CAMERA_FRAMERATE" ]]; then
+		CAMERA_FRAMERATE=5
+	fi
+	if [[ -z "$MOTION_MOVIE" ]]; then
+		MOTION_MOVIE=1
+	fi
+	if [[ -z "$MOTION_THRESHOLD" ]]; then
+		MOTION_THRESHOLD=1500
+	fi
+	if [[ -z "$MOTION_FRAMES" ]]; then
+		MOTION_FRAMES=1
+	fi
+	if [[ -z "$MOTION_EVENT_GAP" ]]; then
+		MOTION_EVENT_GAP=60
+	fi
+	# set default settings for the notifications
+	if [[ -z "$EMAIL_ENABLE" ]]; then
+		EMAIL_ENABLE=0
+	fi
+	if [[ -z "$SLACK_ENABLE" ]]; then
+		SLACK_ENABLE=0
+	fi
+	if [[ -z "$DEBUG" ]]; then
+		DEBUG=0
 	fi
 	# write the file
 	enable_write_boot
 	cat > $MY_CONFIG <<-EOF
-# $MY_NAME v$MY_VERSION
-NAME='$NAME'
-PASSWORD='$PASSWORD'
-TIMEZONE='$TIMEZONE'
-COUNTRY_CODE='$COUNTRY_CODE'
-DEBUG='$DEBUG'
+### $MY_NAME v$MY_VERSION
+
+# name of the device
+DEVICE_NAME='$DEVICE_NAME'
+# password of the device (for both web and ssh)
+DEVICE_PASSWORD='$DEVICE_PASSWORD'
+# timezone of the device that be used for displaying the right time
+DEVICE_TIMEZONE='$DEVICE_TIMEZONE'
+# country code of the device for connecting to the WiFi network
+DEVICE_COUNTRY_CODE='$DEVICE_COUNTRY_CODE'
+
+# WiFi mode for connecting to an existing WiFi network ("CLIENT") or acting as an access point ("AP")
 WIFI_MODE='$WIFI_MODE'
-AP_PASSPHRASE='$AP_PASSPHRASE'
-WIFI_SSID='$WIFI_SSID'
-WIFI_PASSPHRASE='$WIFI_PASSPHRASE'
+# The passphrase to use when connecting to this access point (minimum 8 characters). Leave it empty for no password
+WIFI_AP_PASSPHRASE='$WIFI_AP_PASSPHRASE'
+# The name of the wireless network (SSID) to connect to
+WIFI_CLIENT_SSID='$WIFI_CLIENT_SSID'
+# The passphrase to use to connect to the network. Leave it empty for open networks
+WIFI_CLIENT_PASSPHRASE='$WIFI_CLIENT_PASSPHRASE'
+
+# Set a static IP address for this device. Leave it empty to use DHCP
 NETWORK_IP='$NETWORK_IP'
+# Set the default gateway. Leave it empty for having DHCP setting it
 NETWORK_GW='$NETWORK_GW'
+# Set the DNS server to use. Leave it empty for having DHCP setting it
 NETWORK_DNS='$NETWORK_DNS'
-REMOTE_ACCESS='$REMOTE_ACCESS'
-DISABLE_PICTURE='$DISABLE_PICTURE'
-DISABLE_MOVIE='$DISABLE_MOVIE'
-RESOLUTION='$RESOLUTION'
-ROTATE='$ROTATE'
-FRAMERATE='$FRAMERATE'
+# If set the device will be recheable from the Internet through a serveo.net tunnel
+NETWORK_REMOTE_ACCESS='$NETWORK_REMOTE_ACCESS'
+
+# The resolution for picture/video (default: 640x480)
+CAMERA_RESOLUTION='$CAMERA_RESOLUTION'
+# Rotate image this number of degrees (default: 0)
+CAMERA_ROTATE='$CAMERA_ROTATE'
+# Maximum number of frames to be captured per second (default: 5)
+CAMERA_FRAMERATE='$CAMERA_FRAMERATE'
+
+# If set a movie (in addition to the picture) will be recorded upon motion
+MOTION_MOVIE='$MOTION_MOVIE'
+# Number of changed pixels that triggers motion detection (default: 1500)
 MOTION_THRESHOLD='$MOTION_THRESHOLD'
+# The minimum number of frames in a row to be considered true motion (default: 1)
 MOTION_FRAMES='$MOTION_FRAMES'
+# Seconds of no motion that triggers the end of an event (default: 60)
+MOTION_EVENT_GAP='$MOTION_EVENT_GAP'
+
+# When a motion is detected, the snapshot is attached to an e-mail message and sent to the configured recipients
 EMAIL_ENABLE='$EMAIL_ENABLE'
+# The e-mail address the notification has to be sent to. For multiple recipients, separate them with comma
 EMAIL_TO='$EMAIL_TO'
+# The mail server to use
 EMAIL_SERVER='$EMAIL_SERVER'
+# Set if the mail server requires SSL/TLS before starting the negotiation
 EMAIL_TLS='$EMAIL_TLS'
+# Optional username for authenticating against the mail server. Leave it empty for no authentication
 EMAIL_USERNAME='$EMAIL_USERNAME'
+# Optional password for authenticating against the mail server.
 EMAIL_PASSWORD='$EMAIL_PASSWORD'
+
+# When a motion is detected, the snapshot is posted on the configured slack channel
 SLACK_ENABLE='$SLACK_ENABLE'
+# The token used for authenticating against Slack
 SLACK_TOKEN='$SLACK_TOKEN'
+# The slack channel to upload the snapshot once motion is detected
 SLACK_CHANNEL='$SLACK_CHANNEL'
+
+# enable/disable debug mode to increase the verbosity and print out debug messages for troubleshooting
+DEBUG='$DEBUG'
 	EOF
 	disable_write_boot
 }
@@ -704,33 +776,33 @@ fi
 # configure the system
 function configure_system {
 	# hostname
-	log "Configuring device name to $NAME"
-	raspi-config nonint do_hostname "$NAME"
-	hostnamectl set-hostname "$NAME"
+	log "Configuring device name to $DEVICE_NAME"
+	raspi-config nonint do_hostname "$DEVICE_NAME"
+	hostnamectl set-hostname "$DEVICE_NAME"
 	/etc/init.d/avahi-daemon restart
 	
 	# password
-	log "Configuring password to $PASSWORD"
-	if [[ -n "$PASSWORD" ]]; then
+	log "Configuring password to $DEVICE_PASSWORD"
+	if [[ -n "$DEVICE_PASSWORD" ]]; then
 		# change the password with chpasswd
-		echo "admin:$PASSWORD" | chpasswd
+		echo "admin:$DEVICE_PASSWORD" | chpasswd
 	else
 		# empty password, manipulate directly the shadow file
 		sed -i -E 's/^admin:[^:]+:(.+)$/admin::\1/' /etc/shadow
 	fi
 	# set the web password 
-	echo "admin:$PASSWORD" > $WEB_PASSWD_FILE
+	echo "admin:$DEVICE_PASSWORD" > $WEB_PASSWD_FILE
 
 	# timezone
-	if [[ -n "$TIMEZONE" ]]; then
-		log "Configuring timezone to $TIMEZONE"
-		raspi-config nonint do_change_timezone "$TIMEZONE"
+	if [[ -n "$DEVICE_TIMEZONE" ]]; then
+		log "Configuring timezone to $DEVICE_TIMEZONE"
+		raspi-config nonint do_change_timezone "$DEVICE_TIMEZONE"
 	fi
 	
 	# country code
-	if [[ -n "$COUNTRY_CODE" ]]; then
-		log "Configuring country code to $COUNTRY_CODE"
-		raspi-config nonint do_wifi_country "$COUNTRY_CODE"
+	if [[ -n "$DEVICE_COUNTRY_CODE" ]]; then
+		log "Configuring country code to $DEVICE_COUNTRY_CODE"
+		raspi-config nonint do_wifi_country "$DEVICE_COUNTRY_CODE"
 	fi
 }
 
@@ -775,14 +847,9 @@ function configure_services {
 	local ESCAPED_MY_FILE=`echo $MY_FILE|sed 's|/|\\\/|g'`
 	sed -i 's/start_motion_daemon=no/start_motion_daemon=yes/' $CAMERA_CONFIG_DEFAULT
 	sed -i -E 's/^daemon .+/daemon on/' $CAMERA_CONFIG
-	sed -i -E 's/^width .+/width 640/' $CAMERA_CONFIG
-	sed -i -E 's/^height .+/height 480/' $CAMERA_CONFIG
-	sed -i -E 's/^framerate .+/framerate 5/' $CAMERA_CONFIG
 	sed -i -E 's/^pre_capture .+/pre_capture 2/' $CAMERA_CONFIG
 	sed -i -E 's/^post_capture .+/post_capture 2/' $CAMERA_CONFIG
-	sed -i -E 's/^event_gap .+/event_gap 10/' $CAMERA_CONFIG
 	sed -i -E 's/^max_movie_time .+/max_movie_time 60/' $CAMERA_CONFIG
-	sed -i -E 's/^ffmpeg_output_movies .+/ffmpeg_output_movies on/' $CAMERA_CONFIG
 	sed -i -E 's/^ffmpeg_video_codec .+/ffmpeg_video_codec mkv/' $CAMERA_CONFIG
 	sed -i -E 's/^locate_motion_mode .+/locate_motion_mode on/' $CAMERA_CONFIG
 	sed -i -E 's/^locate_motion_style .+/locate_motion_style redbox/' $CAMERA_CONFIG
@@ -810,18 +877,18 @@ function configure_services {
 
 # configure remote internet access through serveo.net
 function configure_remote_access {
-	log "Enabling remote Internet access through http://$NAME.serveo.net"
+	log "Enabling remote Internet access through http://$DEVICE_NAME.serveo.net"
 	killall autossh 2>/dev/null
 	sleep 1
 	# initiate serveo.net tunnel for web and ssh services
-	autossh -f -M 0 -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -R $NAME:80:localhost:80 -R $NAME:22:localhost:22 serveo.net
+	autossh -f -M 0 -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -R $DEVICE_NAME:80:localhost:80 -R $DEVICE_NAME:22:localhost:22 serveo.net
 }
 
 # configure the network
 function configure_network {
 	# configure the device to connect to an existing WiFi network
 	if [[ "$WIFI_MODE" == "CLIENT" ]]; then
-		log "Setting client wifi mode with SSID $WIFI_SSID, passphrase $WIFI_PASSPHRASE"
+		log "Setting client wifi mode with SSID $WIFI_CLIENT_SSID, passphrase $WIFI_CLIENT_PASSPHRASE"
 		# if it was running as an AP, stop the AP services
 		iptables -t nat -F
 		if pgrep -x "hostapd" > /dev/null; then
@@ -852,23 +919,23 @@ function configure_network {
 		# restart network services
 		restart_network
 		# connect to the wireless network
-		raspi-config nonint do_wifi_ssid_passphrase "$WIFI_SSID" "$WIFI_PASSPHRASE"
+		raspi-config nonint do_wifi_ssid_passphrase "$WIFI_CLIENT_SSID" "$WIFI_CLIENT_PASSPHRASE"
 		# configure remote access
-		if [[ $REMOTE_ACCESS == 1 ]]; then
+		if [[ $NETWORK_REMOTE_ACCESS == 1 ]]; then
 			configure_remote_access
 		fi
 	# configure the device to act as an access point
 	else
-		log "Setting AP wifi mode SSID $NAME with passphrase $AP_PASSPHRASE"
+		log "Setting AP wifi mode SSID $DEVICE_NAME with passphrase $WIFI_AP_PASSPHRASE"
 		# if it was running as CLIENT, stop the CLIENT services
 		killall autossh 2>/dev/null
 		# write hostapd configuration
 		clean_ap_config
-		echo "ssid=$NAME" >> $AP_CONFIG
+		echo "ssid=$DEVICE_NAME" >> $AP_CONFIG
 		# if a passphrase is provided, enable secure connection
-		if [[ -n "$AP_PASSPHRASE" && ${#AP_PASSPHRASE} -ge 8 ]]; then
+		if [[ -n "$WIFI_AP_PASSPHRASE" && ${#WIFI_AP_PASSPHRASE} -ge 8 ]]; then
 			echo "wpa=2" >> $AP_CONFIG
-			echo "wpa_passphrase=$AP_PASSPHRASE" >> $AP_CONFIG
+			echo "wpa_passphrase=$WIFI_AP_PASSPHRASE" >> $AP_CONFIG
 			echo "wpa_key_mgmt=WPA-PSK" >> $AP_CONFIG
 			echo "wpa_pairwise=TKIP" >> $AP_CONFIG
 			echo "rsn_pairwise=CCMP" >> $AP_CONFIG
@@ -912,46 +979,47 @@ function configure_network {
 
 # configure the camera
 function configure_camera {
-	# set resolution
-	if [[ -n "$RESOLUTION" ]]; then
-		log "Setting resolution to $RESOLUTION"
-		local WIDTH=`echo $RESOLUTION| sed -E 's/x.+$//'`
-		local HEIGHT=`echo $RESOLUTION| sed -E 's/^.+x//'`
+	# set camera resolution
+	if [[ -n "$CAMERA_RESOLUTION" ]]; then
+		log "Setting resolution to $CAMERA_RESOLUTION"
+		local WIDTH=`echo $CAMERA_RESOLUTION| sed -E 's/x.+$//'`
+		local HEIGHT=`echo $CAMERA_RESOLUTION| sed -E 's/^.+x//'`
 		sed -i -E "s/^width .+/width $WIDTH/" $CAMERA_CONFIG
 		sed -i -E "s/^height .+/height $HEIGHT/" $CAMERA_CONFIG
 	fi
-	# set rotate
-	if [[ -n "$ROTATE" ]]; then
-		log "Setting camera rotate by $ROTATE degree"
-		sed -i -E "s/^rotate .+/rotate $ROTATE/" $CAMERA_CONFIG
+	# set camera rotate
+	if [[ -n "$CAMERA_ROTATE" ]]; then
+		log "Setting camera rotate by $CAMERA_ROTATE degree"
+		sed -i -E "s/^rotate .+/rotate $CAMERA_ROTATE/" $CAMERA_CONFIG
 	fi
-	# disable picture
-	if [[ -n "$DISABLE_PICTURE" ]]; then
-		log "Setting disable picture to $DISABLE_PICTURE"
-		if [[ $DISABLE_PICTURE == 1 ]]; then
-			sed -i -E "s/^output_pictures .+/output_pictures off/" $CAMERA_CONFIG
-		else
-			sed -i -E "s/^output_pictures .+/output_pictures best/" $CAMERA_CONFIG
-		fi
+	# set camera framerate
+	if [[ -n "$CAMERA_FRAMERATE" ]]; then
+		log "Setting camera framerate to $CAMERA_FRAMERATE"
+		sed -i -E "s/^framerate .+/framerate $CAMERA_FRAMERATE/" $CAMERA_CONFIG
 	fi
-	# disable movie
-	if [[ -n "$DISABLE_MOVIE" ]]; then
-		log "Setting disable movie to $DISABLE_MOVIE"
-		if [[ $DISABLE_MOVIE == 1 ]]; then
-			sed -i -E "s/^ffmpeg_output_movies .+/ffmpeg_output_movies off/" $CAMERA_CONFIG
-		else
+	# set motion movie
+	if [[ -n "$MOTION_MOVIE" ]]; then
+		log "Setting motion movie to $MOTION_MOVIE"
+		if [[ $MOTION_MOVIE == 1 ]]; then
 			sed -i -E "s/^ffmpeg_output_movies .+/ffmpeg_output_movies on/" $CAMERA_CONFIG
+		else
+			sed -i -E "s/^ffmpeg_output_movies .+/ffmpeg_output_movies off/" $CAMERA_CONFIG
 		fi
 	fi
-	# set threshold
+	# set motion threshold
 	if [[ -n "$MOTION_THRESHOLD" ]]; then
-		log "Setting camera motion threshold to $MOTION_THRESHOLD"
+		log "Setting motion threshold to $MOTION_THRESHOLD"
 		sed -i -E "s/^threshold .+/threshold $MOTION_THRESHOLD/" $CAMERA_CONFIG
 	fi
 	# set motion frames
 	if [[ -n "$MOTION_FRAMES" ]]; then
-		log "Setting camera minimum motion frames to $MOTION_FRAMES"
+		log "Setting minimum motion frames to $MOTION_FRAMES"
 		sed -i -E "s/^minimum_motion_frames .+/minimum_motion_frames $MOTION_FRAMES/" $CAMERA_CONFIG
+	fi
+	# set motion event gap
+	if [[ -n "$MOTION_EVENT_GAP" ]]; then
+		log "Setting motion event gap to $MOTION_EVENT_GAP seconds"
+		sed -i -E "s/^event_gap .+/event_gap $MOTION_EVENT_GAP/" $CAMERA_CONFIG
 	fi
 	# restart motion
 	log "Restarting camera"
@@ -1091,11 +1159,57 @@ function upgrade {
 	if [[ -n "$1" ]]; then
 		log "Upgrading from v$1 to v$MY_VERSION"
 		enable_write_boot
-		# replace old files with the new files
-		rm -rf $MY_DIR
-		cp -R $MY_NAME $MY_DIR
-		# update config
+		# backup current version
+		local BACKUP_DIR="$MY_DIR/backup/v$1"
+		rm -rf $BACKUP_DIR
+		mkdir -p $BACKUP_DIR
+		mv $MY_DIR/* $BACKUP_DIR
+		# copy in the new files
+		cp -R $MY_NAME/* $MY_DIR
+		# upgrade configuration file
+		if [[ -n "$NAME" ]]; then
+			DEVICE_NAME=$NAME
+		fi
+		if [[ -n "$PASSWORD" ]]; then
+			DEVICE_PASSWORD=$PASSWORD
+		fi
+		if [[ -n "$TIMEZONE" ]]; then
+			DEVICE_TIMEZONE=$TIMEZONE
+		fi
+		if [[ -n "$COUNTRY_CODE" ]]; then
+			DEVICE_COUNTRY_CODE=$COUNTRY_CODE
+		fi
+		if [[ -n "$AP_PASSPHRASE" ]]; then
+			WIFI_AP_PASSPHRASE=$AP_PASSPHRASE
+		fi
+		if [[ -n "$WIFI_SSID" ]]; then
+			WIFI_CLIENT_SSID=$WIFI_SSID
+		fi
+		if [[ -n "$WIFI_PASSPHRASE" ]]; then
+			WIFI_CLIENT_PASSPHRASE=$WIFI_PASSPHRASE
+		fi
+		if [[ -n "$REMOTE_ACCESS" ]]; then
+			NETWORK_REMOTE_ACCESS=$REMOTE_ACCESS
+		fi
+		if [[ -n "$DISABLE_MOVIE" ]]; then
+			if [[ $DISABLE_MOVIE = 0 ]]; then
+				MOTION_MOVIE=1
+			else
+				MOTION_MOVIE=0
+			fi
+		fi
+		if [[ -n "$RESOLUTION" ]]; then
+			CAMERA_RESOLUTION=$RESOLUTION
+		fi
+		if [[ -n "$ROTATE" ]]; then
+			CAMERA_ROTATE=$ROTATE
+		fi
+		if [[ -n "$FRAMERATE" ]]; then
+			CAMERA_FRAMERATE=$FRAMERATE
+		fi
 		save_config
+		# reload configuration file
+		load_config
 		disable_write_boot
 		# deploy the admin panel
 		configure_admin_panel
@@ -1197,12 +1311,12 @@ if [ "$1" = "notify" ]; then
 				if [ "$EMAIL_ENABLE" = "1" ]; then
 					# send email notification
 					log "Sending email to $EMAIL_TO"
-					mpack -s "[$NAME] $NOTIFICATION_SUBJECT" "$PICTURE" "$EMAIL_TO"
+					mpack -s "[$DEVICE_NAME] $NOTIFICATION_SUBJECT" "$PICTURE" "$EMAIL_TO"
 				fi
 				if [ "$SLACK_ENABLE" = "1" ]; then
 					# send slack notification
 					log "Sending slack notification to channel $SLACK_CHANNEL"
-					curl -F file=@$PICTURE -F channels=$SLACK_CHANNEL -F token=$SLACK_TOKEN initial_comment="[$NAME] $NOTIFICATION_SUBJECT" https://slack.com/api/files.upload
+					curl -F file=@$PICTURE -F channels=$SLACK_CHANNEL -F token=$SLACK_TOKEN initial_comment="[$DEVICE_NAME] $NOTIFICATION_SUBJECT" https://slack.com/api/files.upload
 				fi
 			else
 				# queue the notification
@@ -1266,9 +1380,9 @@ if [ "$1" = "checkup" ]; then
 			log "Disconnected from the network, reconnecting"
 			configure_network
 		else
-			if [[ $REMOTE_ACCESS == 1 ]]; then
+			if [[ $NETWORK_REMOTE_ACCESS == 1 ]]; then
 				# check if the web service is correctly exposed through serveo.net
-				if ! curl -v -m 10 --silent http://$NAME.serveo.net 2>&1 | grep -q "401 - Unauthorized"; then
+				if ! curl -v -m 10 --silent http://$DEVICE_NAME.serveo.net 2>&1 | grep -q "401 - Unauthorized"; then
 					log "Remote Internet access not available, reconnecting"
 					configure_remote_access
 				fi
@@ -1295,37 +1409,37 @@ fi
 ### system
 
 # set the name
-if [ "$1" = "set_name" ]; then
+if [ "$1" = "set_device_name" ]; then
 	if [[ -n "$2" ]]; then
-		log "Saving name $2"
-		NAME=$2
+		log "Saving device name $2"
+		DEVICE_NAME=$2
 		save_config
 	fi
 fi
 
 # set the country code ($2: country code)
-if [ "$1" = "set_country_code" ]; then
+if [ "$1" = "set_device_country_code" ]; then
 	if [[ -n "$2" ]]; then
-		log "Saving country code $2"
-		COUNTRY_CODE=$2
+		log "Saving device country code $2"
+		DEVICE_COUNTRY_CODE=$2
 		save_config
 	fi
 fi
 
 # set the timezone
-if [ "$1" = "set_timezone" ]; then
+if [ "$1" = "set_device_timezone" ]; then
 	if [[ -n "$2" ]]; then
-		log "Saving timezone $2"
-		TIMEZONE=$2
+		log "Saving device timezone $2"
+		DEVICE_TIMEZONE=$2
 		save_config
 	fi
 fi
 
 # set all the passwords to the given value
-if [ "$1" = "set_password" ]; then
+if [ "$1" = "set_device_password" ]; then
 	if [[ -n "$2" ]]; then
-		log "Saving password $2"
-		PASSWORD=$2
+		log "Saving device password $2"
+		DEVICE_PASSWORD=$2
 		save_config
 	fi
 fi
@@ -1354,7 +1468,7 @@ fi
 if [ "$1" = "set_wifi_ap" ]; then
 	if [[ -n "$2" ]]; then
 		log "Saving AP passphrase $2"
-		AP_PASSPHRASE=$2
+		WIFI_AP_PASSPHRASE=$2
 		save_config
 	fi
 fi
@@ -1363,8 +1477,8 @@ fi
 if [ "$1" = "set_wifi_client" ]; then
 	if [[ -n "$2" ]]; then
 		log "Saving WiFi SSID $2 with passphrase $3"
-		WIFI_SSID=$2
-		WIFI_PASSPHRASE=$3
+		WIFI_CLIENT_SSID=$2
+		WIFI_CLIENT_PASSPHRASE=$3
 		save_config
 	fi
 fi
@@ -1379,57 +1493,48 @@ if [ "$1" = "set_network_ip" ]; then
 fi
 
 # set remote access capability ($2: 1 to enable, 0 to disable)
-if [ "$1" = "set_remote_access" ]; then
+if [ "$1" = "set_network_remote_access" ]; then
 	if [[ -n "$2" ]]; then
-		log "Setting remote access to $2"
-		REMOTE_ACCESS=$2
+		log "Setting network remote access to $2"
+		NETWORK_REMOTE_ACCESS=$2
 		save_config
 	fi
 fi
 
 ### camera
 
-# disable saving picture upon motion ($2: 1 to disable, 0 to enable)
-if [ "$1" = "set_disable_picture" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving disable picture $2"
-		DISABLE_PICTURE=$2
-		save_config
-	fi
-fi
-
-# disable saving movie upon motion ($2: 1 to disable, 0 to enable)
-if [ "$1" = "set_disable_movie" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving disable movie $2"
-		DISABLE_MOVIE=$2
-		save_config
-	fi
-fi
-
 # set the resolution of the camera ($2: resolution in the format <width>x<height>)
-if [ "$1" = "set_resolution" ]; then
+if [ "$1" = "set_camera_resolution" ]; then
 	if [[ -n "$2" ]]; then
-		log "Saving resolution $2"
-		RESOLUTION=$2
+		log "Saving camera resolution $2"
+		CAMERA_RESOLUTION=$2
 		save_config
 	fi
 fi
 
 # rotate the image ($2: degree)
-if [ "$1" = "set_rotate" ]; then
+if [ "$1" = "set_camera_rotate" ]; then
 	if [[ -n "$2" ]]; then
-		log "Saving rotate $2 degree"
-		ROTATE=$2
+		log "Saving camera rotate $2 degree"
+		CAMERA_ROTATE=$2
 		save_config
 	fi
 fi
 
 # set the camera framerate ($2: framerate)
-if [ "$1" = "set_framerate" ]; then
+if [ "$1" = "set_camera_framerate" ]; then
 	if [[ -n "$2" ]]; then
-		log "Saving framerate $2"
-		FRAMERATE=$2
+		log "Saving camera framerate $2"
+		CAMERA_FRAMERATE=$2
+		save_config
+	fi
+fi
+
+# enable/disable saving movie upon motion ($2: 1 to enable, 0 to disable)
+if [ "$1" = "set_motion_movie" ]; then
+	if [[ -n "$2" ]]; then
+		log "Saving motion movie to $2"
+		MOTION_MOVIE=$2
 		save_config
 	fi
 fi
@@ -1448,6 +1553,15 @@ if [ "$1" = "set_motion_frames" ]; then
 	if [[ -n "$2" ]]; then
 		log "Saving minimum motion frames $2"
 		MOTION_FRAMES=$2
+		save_config
+	fi
+fi
+
+# set the camera motion event gap ($2: event gap in seconds)
+if [ "$1" = "set_motion_event_gap" ]; then
+	if [[ -n "$2" ]]; then
+		log "Saving motion event gap to $2"
+		MOTION_EVENT_GAP=$2
 		save_config
 	fi
 fi
