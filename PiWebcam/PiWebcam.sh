@@ -348,6 +348,15 @@ MOTION_FRAMES='$MOTION_FRAMES'
 # Seconds of no motion that triggers the end of an event (default: 60)
 MOTION_EVENT_GAP='$MOTION_EVENT_GAP'
 
+# If checked, upon a motion the image will be further analyzed with an artifical intelligence model to detect a specific object
+IMAGE_ANALYSIS_ENABLE='$IMAGE_ANALYSIS_ENABLE'
+# The API key for authenticating against the AI service
+IMAGE_ANALYSIS_TOKEN='$IMAGE_ANALYSIS_TOKEN'
+# The object that must be present in the image to trigger the notification (e.g. people)
+IMAGE_ANALYSIS_OBJECT='$IMAGE_ANALYSIS_OBJECT'
+# The confidence threshold in percentage for the ojbect to trigger the notification (e.g. 90)
+IMAGE_ANALYSIS_THRESHOLD='$IMAGE_ANALYSIS_THRESHOLD'
+
 # When a motion is detected, the snapshot is attached to an e-mail message and sent to the configured recipients
 EMAIL_ENABLE='$EMAIL_ENABLE'
 # The e-mail address the notification has to be sent to. For multiple recipients, separate them with comma
@@ -1404,209 +1413,19 @@ if [ "$1" = "checkup" ]; then
 fi
 
 #############
-# User Settings
+# Set
 #############
 
-### system
-
-# set the name
-if [ "$1" = "set_device_name" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving device name $2"
-		DEVICE_NAME=$2
+# set and save user settings ($2: setting, $3: value)
+if [ "$1" = "set" ]; then
+	KEY=$2
+	VALUE=$3
+	if [[ -n "$KEY" ]]; then
+		# use the first parameter as variable name and the second as its value
+		VARIABLE_NAME=$KEY
+		eval $VARIABLE_NAME="$VALUE"
+		log "Saving $VARIABLE_NAME = $VALUE"
+		# save the configuration
 		save_config
 	fi
 fi
-
-# set the country code ($2: country code)
-if [ "$1" = "set_device_country_code" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving device country code $2"
-		DEVICE_COUNTRY_CODE=$2
-		save_config
-	fi
-fi
-
-# set the timezone
-if [ "$1" = "set_device_timezone" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving device timezone $2"
-		DEVICE_TIMEZONE=$2
-		save_config
-	fi
-fi
-
-# set all the passwords to the given value
-if [ "$1" = "set_device_password" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving device password $2"
-		DEVICE_PASSWORD=$2
-		save_config
-	fi
-fi
-
-# set debug
-if [ "$1" = "set_debug" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving debug $2"
-		DEBUG=$2
-		save_config
-	fi
-fi
-
-### network
-
-# set the WiFi mode ($2: "AP" or "CLIENT")
-if [ "$1" = "set_wifi_mode" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving WiFi mode $2"
-		WIFI_MODE=$2
-		save_config
-	fi
-fi
-
-# set the AP passphrase ($2: optional passphrase)
-if [ "$1" = "set_wifi_ap" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving AP passphrase $2"
-		WIFI_AP_PASSPHRASE=$2
-		save_config
-	fi
-fi
-
-# set wifi client settings ($2: SSID, $3: optional passphrase)
-if [ "$1" = "set_wifi_client" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving WiFi SSID $2 with passphrase $3"
-		WIFI_CLIENT_SSID=$2
-		WIFI_CLIENT_PASSPHRASE=$3
-		save_config
-	fi
-fi
-
-# set the network ip ($2: ip, $3: optional gw, $4: optional DNS )
-if [ "$1" = "set_network_ip" ]; then
-	log "Saving network configuration $2 $3 $2"
-	NETWORK_IP=$2
-	NETWORK_GW=$3
-	NETWORK_DNS=$4
-	save_config
-fi
-
-# set remote access capability ($2: 1 to enable, 0 to disable)
-if [ "$1" = "set_network_remote_access" ]; then
-	if [[ -n "$2" ]]; then
-		log "Setting network remote access to $2"
-		NETWORK_REMOTE_ACCESS=$2
-		save_config
-	fi
-fi
-
-### camera
-
-# set the resolution of the camera ($2: resolution in the format <width>x<height>)
-if [ "$1" = "set_camera_resolution" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving camera resolution $2"
-		CAMERA_RESOLUTION=$2
-		save_config
-	fi
-fi
-
-# rotate the image ($2: degree)
-if [ "$1" = "set_camera_rotate" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving camera rotate $2 degree"
-		CAMERA_ROTATE=$2
-		save_config
-	fi
-fi
-
-# set the camera framerate ($2: framerate)
-if [ "$1" = "set_camera_framerate" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving camera framerate $2"
-		CAMERA_FRAMERATE=$2
-		save_config
-	fi
-fi
-
-# enable/disable saving movie upon motion ($2: 1 to enable, 0 to disable)
-if [ "$1" = "set_motion_movie" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving motion movie to $2"
-		MOTION_MOVIE=$2
-		save_config
-	fi
-fi
-
-# set the camera motion threshold ($2: threshold in pixels)
-if [ "$1" = "set_motion_threshold" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving motion threshold $2"
-		MOTION_THRESHOLD=$2
-		save_config
-	fi
-fi
-
-# set the camera minimum motion frames ($2: frames)
-if [ "$1" = "set_motion_frames" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving minimum motion frames $2"
-		MOTION_FRAMES=$2
-		save_config
-	fi
-fi
-
-# set the camera motion event gap ($2: event gap in seconds)
-if [ "$1" = "set_motion_event_gap" ]; then
-	if [[ -n "$2" ]]; then
-		log "Saving motion event gap to $2"
-		MOTION_EVENT_GAP=$2
-		save_config
-	fi
-fi
-
-### notifications
-
-# enable/disable email notifications ($2: 1 enable, 0 disable)
-if [ "$1" = "set_email_enable" ]; then
-	if [[ -n "$2" ]]; then
-		log "Setting email notifications to $2"
-		EMAIL_ENABLE=$2
-		save_config
-	fi
-fi
-
-# configure email notifications ($2: to, $3: server, $4: TLS, $5: username, $6: password)
-if [ "$1" = "set_email" ]; then
-	if [[ -n "$2" && -n "$3" ]]; then
-		log "Saving email configuration to $2 $3 $4 $5 $6"
-		EMAIL_TO=$2
-		EMAIL_SERVER=$3
-		EMAIL_TLS=$4
-		EMAIL_USERNAME=$5
-		EMAIL_PASSWORD=$6
-		save_config
-	fi
-fi
-
-# enable/disable slack notifications ($2: 1 enable, 0 disable)
-if [ "$1" = "set_slack_enable" ]; then
-	if [[ -n "$2" ]]; then
-		log "Setting slack notifications to $2"
-		SLACK_ENABLE=$2
-		save_config
-	fi
-fi
-
-# configure slack notifications ($2: token $3: channel)
-if [ "$1" = "set_slack" ]; then
-	if [[ -n "$2" && -n "$3" ]]; then
-		log "Saving slack configuration with token $2 and channel $3"
-		SLACK_TOKEN=$2
-		SLACK_CHANNEL=$3
-		save_config
-	fi
-fi
-

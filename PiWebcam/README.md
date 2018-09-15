@@ -112,9 +112,11 @@ The following  settings can be customized through the admin web panel.
 
 * **Resolution**: Select the resolution for picture/video (default: 640x480)
 * **Rotate**: Rotate image this number of degrees (default: 0)
-* **Disable picture / Disable video**: Select to prevent saving an image/video when motion is detected (default: unchecked)
+* **Framerate**: Maximum number of frames to be captured per second (default: 5)
+* **Record movie**: If checked a movie (in addition to a picture) will be recorded upon motion (default: checked)
 * **Threshold**: Number of changed pixels that triggers motion detection (default: 1500)
 * **Minimum motion frames**: The minimum number of frames in a row to be considered true motion (default: 1)
+* **Event gap**: Seconds of no motion that triggers the end of an event (default: 60)
 
 ## Notification Settings
 
@@ -165,7 +167,7 @@ Upon installation, the system and web password as well as the Access Point passp
 ## API
 
 All of the PiWebcam functionalities and settings can be controlled through the CLI (e.g. via SSH or serial) by invoking as root the `/boot/PiWebcam/PiWebcam.sh`script with the commands detailed below. For each command a detailed list of action is also provided.
-Additionally, any setting exposed through the web interface, can also be set programmatically (by invoking e.g.  <http://user:password@piwebcam-d68c2f.local/system.php?MY_NAME=newName>).
+Additionally, any setting exposed through the web interface, can also be set programmatically (by invoking e.g.  <http://user:password@piwebcam-d68c2f.local/system.php?DEVICE_NAME=newName>).
 
 **Install PiWebcam (run manually by the user at the first installation only)**
 
@@ -365,46 +367,49 @@ Additionally, any setting exposed through the web interface, can also be set pro
 * Restart core services if no more running
 * if disconnected from Internet, try reconnecting to the network
 
-** Save system settings (run when the saving settings from the web panel. Requires "configure_system" to apply)  **
+** Save configuration settings (run when the saving settings from the web panel. Require "configure_*" to apply the changes)  **
 
 ```
-sudo /boot/PiWebcam/PiWebcam.sh set_name <device_name>
-sudo /boot/PiWebcam/PiWebcam.sh set_country_code <country_code>
-sudo /boot/PiWebcam/PiWebcam.sh set_timezone <timezone>
-sudo /boot/PiWebcam/PiWebcam.sh set_password <password>
-sudo /boot/PiWebcam/PiWebcam.sh set_debug <0|1>
+sudo /boot/PiWebcam/PiWebcam.sh set <setting> <value>
 ```
 
-** Save network settings (run when the saving settings from the web panel. Requires "configure_network" to apply)  **
+Where setting is one of the following (the same setting is stored in the configuration file):
 
-```
-sudo /boot/PiWebcam/PiWebcam.sh set_wifi_mode <AP|CLIENT>
-sudo /boot/PiWebcam/PiWebcam.sh set_wifi_ap [passphrase]
-sudo /boot/PiWebcam/PiWebcam.sh set_wifi_client <SSID> [passphrase]
-sudo /boot/PiWebcam/PiWebcam.sh set_network_ip <ip> [gateway] [dns]
-sudo /boot/PiWebcam/PiWebcam.sh set_remote_access <0|1>
-```
-
-** Save camera settings (run when the saving settings from the web panel. Requires "configure_camera" to apply)  **
-
-```
-sudo /boot/PiWebcam/PiWebcam.sh set_disable_picture <0|1>
-sudo /boot/PiWebcam/PiWebcam.sh set_disable_movie <0|1>
-sudo /boot/PiWebcam/PiWebcam.sh set_resolution <resolution>
-sudo /boot/PiWebcam/PiWebcam.sh set_rotate <degrees>
-sudo /boot/PiWebcam/PiWebcam.sh set_framerate <framerate>
-sudo /boot/PiWebcam/PiWebcam.sh set_motion_threshold <threshold>
-sudo /boot/PiWebcam/PiWebcam.sh set_motion_frames <frames>
-```
-
-** Save notification settings (run when the saving settings from the web panel. Requires "configure_notifications" to apply)  **
-
-```
-sudo /boot/PiWebcam/PiWebcam.sh set_email_enable <0|1>
-sudo /boot/PiWebcam/PiWebcam.sh set_email <recipient[,recipient]> <mail_server> <tls> [username] [password]
-sudo /boot/PiWebcam/PiWebcam.sh set_slack_enable <0|1>
-sudo /boot/PiWebcam/PiWebcam.sh set_slack <token> <channel>
-```
+Setting  | Description
+-------  | ------
+DEVICE_NAME | name of the device
+DEVICE_PASSWORD | password of the device
+DEVICE_TIMEZONE | timezone of the device
+DEVICE_COUNTRY_CODE | country code of the device
+WIFI_MODE | Connect to an existing WiFi network ("CLIENT") or act as an access point ("AP")
+WIFI_AP_PASSPHRASE | The passphrase to use when connecting to this access point
+WIFI_CLIENT_SSID | The name of the wireless network (SSID) to connect to
+WIFI_CLIENT_PASSPHRASE | The passphrase to use to connect to the network
+NETWORK_IP | static IP address for this device
+NETWORK_GW | default gateway
+NETWORK_DNS | DNS server
+NETWORK_REMOTE_ACCESS | If set the device will be recheable from the Internet
+CAMERA_RESOLUTION | The resolution for picture/video
+CAMERA_ROTATE | Rotate image this number of degrees
+CAMERA_FRAMERATE | Maximum number of frames to be captured per second
+MOTION_MOVIE | If set a movie (in addition to the picture) will be recorded upon motion
+MOTION_THRESHOLD | Number of changed pixels that triggers motion detection
+MOTION_FRAMES | The minimum number of frames in a row to be considered true motion
+MOTION_EVENT_GAP | Seconds of no motion that triggers the end of an event
+IMAGE_ANALYSIS_ENABLE | If checked, upon a motion the image will be further analyzed with an AI model to detect a specific object
+IMAGE_ANALYSIS_TOKEN | The API key for authenticating against the AI service
+IMAGE_ANALYSIS_OBJECT | The object that must be present in the image to trigger the notification
+IMAGE_ANALYSIS_THRESHOLD | The confidence threshold in percentage for the ojbect to trigger the notification
+EMAIL_ENABLE | Enable email notifications
+EMAIL_TO | Set email recipients
+EMAIL_SERVER | The mail server to use
+EMAIL_TLS | Set if the mail server requires SSL/TLS before starting the negotiation
+EMAIL_USERNAME | Optional username for the authentication
+EMAIL_PASSWORD | Optional password for the authentication
+SLACK_ENABLE | Enable Slack notifications
+SLACK_TOKEN | The token used for authenticating against Slack
+SLACK_CHANNEL | The slack channel to upload the snapshot once motion is detected
+DEBUG | Enable/disable debug mode for troubleshooting
 
 # Bill of Materials
 
@@ -448,5 +453,10 @@ Raspberry Camera Night Vision Wide Angle  | $13 | https://www.aliexpress.com/ite
 * Bug Report: https://sourceforge.net/p/piwebcam/tickets
 
 ## Changelog
+* v1.1:
+	* Added configurable camera framerate and event gap setting to the the UI
+	* Enhanced upgrade process
+	* New API call "set" replacing all the "set_*" functions
+	* Minor fixes
 * v1.0:
     * First Release

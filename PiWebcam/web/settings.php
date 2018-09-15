@@ -2,14 +2,14 @@
 	include "header.php";
 	// form submitted
 	if(count($_REQUEST) > 0) {
-		if (array_key_exists("CAMERA_RESOLUTION",$_REQUEST)) run("set_camera_resolution '".$_REQUEST["CAMERA_RESOLUTION"]."'");
-		if (array_key_exists("CAMERA_ROTATE",$_REQUEST)) run("set_camera_rotate '".$_REQUEST["CAMERA_ROTATE"]."'");
-		if (array_key_exists("CAMERA_FRAMERATE",$_REQUEST)) run("set_camera_framerate '".$_REQUEST["CAMERA_FRAMERATE"]."'");
+		if (array_key_exists("CAMERA_RESOLUTION",$_REQUEST)) run("set CAMERA_RESOLUTION '".$_REQUEST["CAMERA_RESOLUTION"]."'");
+		if (array_key_exists("CAMERA_ROTATE",$_REQUEST)) run("set CAMERA_ROTATE '".$_REQUEST["CAMERA_ROTATE"]."'");
+		if (array_key_exists("CAMERA_FRAMERATE",$_REQUEST)) run("set CAMERA_FRAMERATE '".$_REQUEST["CAMERA_FRAMERATE"]."'");
 		
-		if (array_key_exists("MOTION_MOVIE",$_REQUEST)) run("set_motion_movie '".$_REQUEST["MOTION_MOVIE"]."'");
-		if (array_key_exists("MOTION_THRESHOLD",$_REQUEST)) run("set_motion_threshold '".$_REQUEST["MOTION_THRESHOLD"]."'");
-		if (array_key_exists("MOTION_FRAMES",$_REQUEST)) run("set_motion_frames '".$_REQUEST["MOTION_FRAMES"]."'");
-		if (array_key_exists("MOTION_EVENT_GAP",$_REQUEST)) run("set_motion_event_gap '".$_REQUEST["MOTION_EVENT_GAP"]."'");
+		if (array_key_exists("MOTION_MOVIE",$_REQUEST)) run("set MOTION_MOVIE '".$_REQUEST["MOTION_MOVIE"]."'");
+		if (array_key_exists("MOTION_THRESHOLD",$_REQUEST)) run("set MOTION_THRESHOLD '".$_REQUEST["MOTION_THRESHOLD"]."'");
+		if (array_key_exists("MOTION_FRAMES",$_REQUEST)) run("set MOTION_FRAMES '".$_REQUEST["MOTION_FRAMES"]."'");
+		if (array_key_exists("MOTION_EVENT_GAP",$_REQUEST)) run("set MOTION_EVENT_GAP '".$_REQUEST["MOTION_EVENT_GAP"]."'");
 		run("configure_camera");
 		load_config();
 		array_push($message["success"],"Configuration applied successfully");

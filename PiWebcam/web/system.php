@@ -4,11 +4,11 @@
 	if(count($_REQUEST) > 0) {
 		// system configuration form
 		if ($_REQUEST["action"] === "system") {
-			if (array_key_exists("DEVICE_NAME",$_REQUEST)) run("set_device_name '".$_REQUEST["DEVICE_NAME"]."'");
-			if (array_key_exists("DEVICE_PASSWORD",$_REQUEST)) run("set_device_password '".$_REQUEST["DEVICE_PASSWORD"]."'");
-			if (array_key_exists("DEVICE_TIMEZONE",$_REQUEST)) run("set_device_timezone '".$_REQUEST["DEVICE_TIMEZONE"]."'");
-			if (array_key_exists("DEVICE_COUNTRY_CODE",$_REQUEST)) run("set_device_country_code '".$_REQUEST["DEVICE_COUNTRY_CODE"]."'");
-			if (array_key_exists("DEBUG",$_REQUEST)) run("set_debug '".$_REQUEST["DEBUG"]."'");
+			if (array_key_exists("DEVICE_NAME",$_REQUEST)) run("set DEVICE_NAME '".$_REQUEST["DEVICE_NAME"]."'");
+			if (array_key_exists("DEVICE_PASSWORD",$_REQUEST)) run("set DEVICE_PASSWORD '".$_REQUEST["DEVICE_PASSWORD"]."'");
+			if (array_key_exists("DEVICE_TIMEZONE",$_REQUEST)) run("set DEVICE_TIMEZONE '".$_REQUEST["DEVICE_TIMEZONE"]."'");
+			if (array_key_exists("DEVICE_COUNTRY_CODE",$_REQUEST)) run("set DEVICE_COUNTRY_CODE '".$_REQUEST["DEVICE_COUNTRY_CODE"]."'");
+			if (array_key_exists("DEBUG",$_REQUEST)) run("set DEBUG '".$_REQUEST["DEBUG"]."'");
 			run("configure_system");
 			load_config();
 			array_push($message["success"],"Configuration applied successfully");
