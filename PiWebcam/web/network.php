@@ -2,16 +2,7 @@
 	include "header.php";
 	// form submitted
 	if(count($_REQUEST) > 0) {
-		if (array_key_exists("WIFI_MODE",$_REQUEST)) run("set WIFI_MODE '".$_REQUEST["WIFI_MODE"]."'");
-		if (array_key_exists("WIFI_AP_PASSPHRASE",$_REQUEST)) run("set WIFI_AP_PASSPHRASE '".$_REQUEST["WIFI_AP_PASSPHRASE"]."'");
-		if (array_key_exists("WIFI_CLIENT_SSID",$_REQUEST)) run("set WIFI_CLIENT_SSID '".$_REQUEST["WIFI_CLIENT_SSID"]."'");
-		if (array_key_exists("WIFI_CLIENT_PASSPHRASE",$_REQUEST)) run("set WIFI_CLIENT_PASSPHRASE '".$_REQUEST["WIFI_CLIENT_PASSPHRASE"]."'");
-
-		if (array_key_exists("NETWORK_IP",$_REQUEST)) run("set NETWORK_IP '".$_REQUEST["NETWORK_IP"]."'");
-		if (array_key_exists("NETWORK_GW",$_REQUEST)) run("set NETWORK_GW '".$_REQUEST["NETWORK_GW"]."'");
-		if (array_key_exists("NETWORK_DNS",$_REQUEST)) run("set NETWORK_DNS '".$_REQUEST["NETWORK_DNS"]."'");
-
-		if (array_key_exists("NETWORK_REMOTE_ACCESS",$_REQUEST)) run("set NETWORK_REMOTE_ACCESS '".$_REQUEST["NETWORK_REMOTE_ACCESS"]."'");
+		save_config(array('WIFI_MODE','WIFI_AP_PASSPHRASE','WIFI_CLIENT_SSID','WIFI_CLIENT_PASSPHRASE','NETWORK_IP','NETWORK_GW','NETWORK_DNS','NETWORK_REMOTE_ACCESS'));
 		run("configure_network");
 		load_config();
 		array_push($message["success"],"Configuration applied successfully");

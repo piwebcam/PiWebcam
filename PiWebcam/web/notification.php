@@ -2,16 +2,7 @@
 	include "header.php";
 	// form submitted
 	if(count($_REQUEST) > 0) {
-		if (array_key_exists("EMAIL_ENABLE",$_REQUEST)) run("set EMAIL_ENABLE '".$_REQUEST["EMAIL_ENABLE"]."'");
-		if (array_key_exists("EMAIL_TO",$_REQUEST)) run("set EMAIL_TO '".$_REQUEST["EMAIL_TO"]."'");
-		if (array_key_exists("EMAIL_SERVER",$_REQUEST)) run("set EMAIL_SERVER '".$_REQUEST["EMAIL_SERVER"]."'");
-		if (array_key_exists("EMAIL_TLS",$_REQUEST)) run("set EMAIL_TLS '".$_REQUEST["EMAIL_TLS"]."'");
-		if (array_key_exists("EMAIL_USERNAME",$_REQUEST)) run("set EMAIL_USERNAME '".$_REQUEST["EMAIL_USERNAME"]."'");
-		if (array_key_exists("EMAIL_PASSWORD",$_REQUEST)) run("set EMAIL_PASSWORD '".$_REQUEST["EMAIL_PASSWORD"]."'");
-		
-		if (array_key_exists("SLACK_ENABLE",$_REQUEST)) run("set SLACK_ENABLE '".$_REQUEST["SLACK_ENABLE"]."'");
-		if (array_key_exists("SLACK_TOKEN",$_REQUEST)) run("set SLACK_TOKEN '".$_REQUEST["SLACK_TOKEN"]."'");
-		if (array_key_exists("SLACK_CHANNEL",$_REQUEST)) run("set SLACK_CHANNEL '".$_REQUEST["SLACK_CHANNEL"]."'");
+		save_config(array('EMAIL_ENABLE','EMAIL_TO','EMAIL_SERVER','EMAIL_TLS','EMAIL_USERNAME','EMAIL_PASSWORD','SLACK_ENABLE','SLACK_TOKEN','SLACK_CHANNEL'));
 		run("configure_notifications");
 		load_config();
 		array_push($message["success"],"Configuration applied successfully");

@@ -23,6 +23,13 @@ function run($command) {
 	return $ret;
 }
 
+// save the configuration setting is in $_REQUEST by runbibg the "set" call for the given array of settings
+function save_config($settings) {
+	foreach($settings as $index => $setting) {
+		if (array_key_exists($setting,$_REQUEST)) run("set $setting '".$_REQUEST[$setting]."'");
+	}
+}
+
 // parse a text in the format key=value and return an array in the format array[key] = value
 function parse_text($text,&$array) {
 	$rows = explode("\n",$text);
@@ -92,6 +99,7 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
 	<!-- DataTables CSS -->
 	<link href="css/dataTables.bootstrap.css" rel="stylesheet">
 	<link href="css/dataTables.responsive.css" rel="stylesheet">
+	<link href="css/jquery.dataTables.min.css" rel="stylesheet">
 
     <!-- Custom CSS -->
     <link href="css/sb-admin-2.css" rel="stylesheet">

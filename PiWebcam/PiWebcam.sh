@@ -44,6 +44,8 @@ DATA_MOUNT_POINT="/mnt"
 export DATA_DIR="$DATA_MOUNT_POINT/data"
 # where to persist our files (logs, notification queue, etc)
 PERSIST_DIR="$DATA_MOUNT_POINT/$MY_NAME"
+# location of the log file
+LOG_FILE=$PERSIST_DIR/$MY_NAME.log
 # the directory through which pictures and movies are exposed inside the web root
 export PLAYBACK_DIR="playback"
 # the size of the root filesystem
@@ -124,21 +126,14 @@ function log {
 	# print out the message
 	echo -e "[\e[33m$MY_NAME\e[0m][$NOW] $1"
 	# save it in the log file (if the persist directory is available there, otherwise in /var/log)
-	local LOG_DIR="/var/log"
-	if [ -d $PERSIST_DIR ]; then
-		LOG_DIR=$PERSIST_DIR
-	fi
-	echo "[$MY_NAME][$NOW] $1" >> $LOG_DIR/$MY_NAME.log
+	echo "[$MY_NAME][$NOW] $1" >> $LOG_FILE
 }
 
 # show 
 function show_logs {
-	local LOG_DIR="/var/log"
-	if [ -d $PERSIST_DIR ]; then
-		LOG_DIR=$PERSIST_DIR
-	fi
-	tail -200 $LOG_DIR/$MY_NAME.log
+	tail -200 $LOG_FILE
 }
+
 if [ "$1" = "show_logs" ]; then
 	show_logs
 fi
@@ -310,6 +305,9 @@ function save_config {
 	if [[ -z "$MOTION_EVENT_GAP" ]]; then
 		MOTION_EVENT_GAP=60
 	fi
+	if [[ -z "$IMAGE_ANALYSIS_ENABLE" ]]; then
+		IMAGE_ANALYSIS_ENABLE=0
+	fi
 	# set default settings for the notifications
 	if [[ -z "$EMAIL_ENABLE" ]]; then
 		EMAIL_ENABLE=0
@@ -374,7 +372,7 @@ IMAGE_ANALYSIS_ENABLE='$IMAGE_ANALYSIS_ENABLE'
 IMAGE_ANALYSIS_TOKEN='$IMAGE_ANALYSIS_TOKEN'
 # The object that must be present in the image to trigger the notification (e.g. people)
 IMAGE_ANALYSIS_OBJECT='$IMAGE_ANALYSIS_OBJECT'
-# The confidence threshold in percentage for the ojbect to trigger the notification (e.g. 90)
+# The probability threshold for the ojbect to trigger the notification (e.g. 0.9)
 IMAGE_ANALYSIS_THRESHOLD='$IMAGE_ANALYSIS_THRESHOLD'
 
 # When a motion is detected, the snapshot is attached to an e-mail message and sent to the configured recipients
@@ -1191,6 +1189,8 @@ function import_firmware {
 function upgrade {
 	if [[ -n "$1" ]]; then
 		log "Upgrading from v$1 to v$MY_VERSION"
+		# install dependencies
+		which jq >/dev/null || apt-get -y install jq
 		enable_write_boot
 		# backup current version
 		local BACKUP_DIR="$MY_DIR/backup/v$1"
@@ -1337,19 +1337,65 @@ fi
 # notify about a motion ($2: filename)
 if [ "$1" = "notify" ]; then
 	PICTURE=$2
+	NOTIFY=1
 	# do not notify when generating a snapshots
 	if [[ -n "$PICTURE" && $PICTURE != *"/.snapshots/"*  ]]; then
+		# check for an internet connection
+		INTERNET_OK=$(eval $INTERNET)
+		# perform image analysis if enabled
+		if [[ $INTERNET_OK == 1 && $IMAGE_ANALYSIS_ENABLE == 1 && -n "$IMAGE_ANALYSIS_TOKEN" && -n "$IMAGE_ANALYSIS_OBJECT" && -n "$IMAGE_ANALYSIS_THRESHOLD" ]]; then
+			# analyze the image
+			IMAGE_ANALYSIS_OUTPUT=$(curl -s -X POST \
+			-H "Authorization: Key $IMAGE_ANALYSIS_TOKEN" \
+			-H "Content-Type: application/json" \
+			-o - \
+			-d @- https://api.clarifai.com/v2/models/aaa03c23b3724a16a56b629203edc62c/outputs << FILEIN
+				{
+					"inputs": [
+			      		{
+							"data": {
+								"image": {
+									"base64": "$(base64 $PICTURE)"
+								}
+							}
+						}
+					]
+				}
+FILEIN
+)
+			log "Image analysis output: $IMAGE_ANALYSIS_OUTPUT"
+			# get the status code
+			STATUS_CODE=`echo $IMAGE_ANALYSIS_OUTPUT| jq '.status.code'`
+			if [[ $STATUS_CODE == 10000 ]]; then
+				# check if the object has been found in the image
+				OBJECT_FOUND=`echo $IMAGE_ANALYSIS_OUTPUT| jq -r ".outputs[0].data.concepts[] | .name == \"$IMAGE_ANALYSIS_OBJECT\" and .value > $IMAGE_ANALYSIS_THRESHOLD" |grep true|wc -l`
+				if [[ $OBJECT_FOUND == 1 ]]; then
+					log "Motion confirmed, $IMAGE_ANALYSIS_OBJECT was FOUND in $PICTURE"
+				else
+					log "Ignoring motion, $IMAGE_ANALYSIS_OBJECT was not found in $PICTURE"
+					# do not notify
+					NOTIFY=0
+					# remove both the picture and the video of the recorded motion
+					rm -f $PICTURE
+					DIR_NAME=`dirname $PICTURE`
+					EVENT_NUMBER=`basename $PICTURE | cut -d'-' -f1`
+					rm -f $DIR_NAME/video/${EVENT_NUMBER}-*
+				fi
+			else
+				log "Image analysis service exited with error code: $STATUS_CODE"
+			fi
+		fi
 		# ensure at least one notification is enabled
 		if [[ "$EMAIL_ENABLE" = "1" || "$SLACK_ENABLE" = "1" ]]; then
 			log "Notifying about $PICTURE"
 			# check if we have an internet connection
-			if [ $(eval $INTERNET) = "1" ]; then
-				if [ "$EMAIL_ENABLE" = "1" ]; then
+			if [[ $INTERNET_OK == "1" ]]; then
+				if [ "$EMAIL_ENABLE" = "1" && "$NOTIFY" = 1 ]; then
 					# send email notification
 					log "Sending email to $EMAIL_TO"
 					mpack -s "[$DEVICE_NAME] $NOTIFICATION_SUBJECT" "$PICTURE" "$EMAIL_TO"
 				fi
-				if [ "$SLACK_ENABLE" = "1" ]; then
+				if [ "$SLACK_ENABLE" = "1" && "$NOTIFY" = 1 ]; then
 					# send slack notification
 					log "Sending slack notification to channel $SLACK_CHANNEL"
 					curl -F file=@$PICTURE -F channels=$SLACK_CHANNEL -F token=$SLACK_TOKEN initial_comment="[$DEVICE_NAME] $NOTIFICATION_SUBJECT" https://slack.com/api/files.upload

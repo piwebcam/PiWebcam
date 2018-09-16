@@ -2,14 +2,7 @@
 	include "header.php";
 	// form submitted
 	if(count($_REQUEST) > 0) {
-		if (array_key_exists("CAMERA_RESOLUTION",$_REQUEST)) run("set CAMERA_RESOLUTION '".$_REQUEST["CAMERA_RESOLUTION"]."'");
-		if (array_key_exists("CAMERA_ROTATE",$_REQUEST)) run("set CAMERA_ROTATE '".$_REQUEST["CAMERA_ROTATE"]."'");
-		if (array_key_exists("CAMERA_FRAMERATE",$_REQUEST)) run("set CAMERA_FRAMERATE '".$_REQUEST["CAMERA_FRAMERATE"]."'");
-		
-		if (array_key_exists("MOTION_MOVIE",$_REQUEST)) run("set MOTION_MOVIE '".$_REQUEST["MOTION_MOVIE"]."'");
-		if (array_key_exists("MOTION_THRESHOLD",$_REQUEST)) run("set MOTION_THRESHOLD '".$_REQUEST["MOTION_THRESHOLD"]."'");
-		if (array_key_exists("MOTION_FRAMES",$_REQUEST)) run("set MOTION_FRAMES '".$_REQUEST["MOTION_FRAMES"]."'");
-		if (array_key_exists("MOTION_EVENT_GAP",$_REQUEST)) run("set MOTION_EVENT_GAP '".$_REQUEST["MOTION_EVENT_GAP"]."'");
+		save_config(array('CAMERA_RESOLUTION','CAMERA_ROTATE','CAMERA_FRAMERATE','MOTION_MOVIE','MOTION_THRESHOLD','MOTION_FRAMES','MOTION_EVENT_GAP','IMAGE_ANALYSIS_ENABLE','IMAGE_ANALYSIS_TOKEN','IMAGE_ANALYSIS_OBJECT','IMAGE_ANALYSIS_THRESHOLD'));
 		run("configure_camera");
 		load_config();
 		array_push($message["success"],"Configuration applied successfully");
@@ -90,6 +83,37 @@
 													<label>Event gap</label>
 													<input name="MOTION_EVENT_GAP" class="form-control" value="<?php print $config["MOTION_EVENT_GAP"]; ?>">
 													<p class="help-block">Seconds of no motion that triggers the end of an event (<i>default: 60</i>)</p>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-lg-12">
+										<div class="panel panel-default">
+											<div class="panel-body">
+												<h3>Image Analysis</h3>
+												<div class="checkbox">
+													<label>
+														<input type='hidden' value="0" name="IMAGE_ANALYSIS_ENABLE">
+														<input value="1" name="IMAGE_ANALYSIS_ENABLE" type="checkbox"<?php if ($config["IMAGE_ANALYSIS_ENABLE"] === "1") print " checked"; ?>>Enable object detection
+													<p class="help-block">If checked, upon a motion the image will be further analyzed with an artifical intelligence model to detect a specific object.
+													</label>
+												</div>
+												<div class="form-group">
+													<label>Token</label>
+													<input name="IMAGE_ANALYSIS_TOKEN" class="form-control" value="<?php print $config["IMAGE_ANALYSIS_TOKEN"]?>">
+													<p class="help-block">The token for authenticating against the cloud service. Click <a target="_blank" href="https://clarifai.com/developer/account/keys/create">HERE</a> for generating a the token.</p>
+												</div>
+												<div class="form-group">
+													<label>Object</label>
+													<input name="IMAGE_ANALYSIS_OBJECT" class="form-control" value="<?php print $config["IMAGE_ANALYSIS_OBJECT"]?>">
+													<p class="help-block">The object that must be present in the image to trigger the motion/notification (e.g. people). Click <a target="_blank" href="https://clarifai.com/demo">HERE</a> for testing your image and check which objects are identified.</p>
+												</div>
+												<div class="form-group">
+													<label>Threshold</label>
+													<input name="IMAGE_ANALYSIS_THRESHOLD" class="form-control" value="<?php print $config["IMAGE_ANALYSIS_THRESHOLD"]?>">
+													<p class="help-block">The probability threshold for the ojbect to trigger the notification (e.g. 0.9).</p>
 												</div>
 											</div>
 										</div>
