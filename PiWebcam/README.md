@@ -282,6 +282,12 @@ Additionally, any setting exposed through the web interface, can also be set pro
 
 * Configure SSMTP mail server 
 
+**Format the data partition (run when performing a Data Reset through the web panel)**
+
+`sudo /boot/PiWebcam/PiWebcam.sh data_reset`
+
+* Format the data partition
+
 **Restore to factory defaults (run when performing a Factory Reset through the web panel)**
 
 `sudo /boot/PiWebcam/PiWebcam.sh factory_reset`
@@ -294,6 +300,12 @@ Additionally, any setting exposed through the web interface, can also be set pro
 `sudo /boot/PiWebcam/PiWebcam.sh reboot`
 
 * Reboot the device
+
+**Show PiWebcam logs (run when accessing the logs through the web panel)**
+
+`sudo /boot/PiWebcam/PiWebcam.sh show_logs`
+
+* Show the latest PiWebcam logs
 
 **Show the configuration file**
 

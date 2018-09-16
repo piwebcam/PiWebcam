@@ -131,6 +131,18 @@ function log {
 	echo "[$MY_NAME][$NOW] $1" >> $LOG_DIR/$MY_NAME.log
 }
 
+# show 
+function show_logs {
+	local LOG_DIR="/var/log"
+	if [ -d $PERSIST_DIR ]; then
+		LOG_DIR=$PERSIST_DIR
+	fi
+	tail -200 $LOG_DIR/$MY_NAME.log
+}
+if [ "$1" = "show_logs" ]; then
+	show_logs
+fi
+
 # append the given string to a file if not already there ($1: string, $2: file)
 function append {
 	if [[ -n "$1" && -n "$2" ]]; then

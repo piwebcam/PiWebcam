@@ -23,7 +23,7 @@
                 <div class="col-lg-12">
                     <div class="panel panel-<?php print $env["MY_WEB_PANEL_STYLE"] ?>">
                         <div class="panel-heading">
-                           <i class="fa fa-video-camera fa-fw"></i> Network & WiFi
+                           <i class="fa fa-video-camera fa-signal"></i> Network & WiFi
                         </div>
                         <div class="panel-body">
 							<form id="form" method="POST" role="form">

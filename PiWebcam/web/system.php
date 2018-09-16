@@ -185,11 +185,12 @@
 								<div class="col-lg-12">
 									<div class="panel panel-default">
 										<div class="panel-body">
+										<center><h3>Device Management</h3></center>
 											<div class="row">
 												<div class="col-lg-4"><center>
 													<form id="reboot_form" method="POST" role="form">
 													<input type="hidden" name="action" value="reboot">
-														<button id="reboot_button" type="submit" onclick='$("#reboot_button").addClass("disabled"); $("#reboot_modal").modal("show");return false;' class="btn btn-info">Reboot Device</button>
+														<button id="reboot_button" type="submit" onclick='$("#reboot_button").addClass("disabled"); $("#reboot_modal").modal("show");return false;' class="btn btn-info">Reboot</button>
 													</form></center>
 												</div>
 												<div class="col-lg-4"><center>

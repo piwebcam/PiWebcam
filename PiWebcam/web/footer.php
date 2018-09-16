@@ -11,9 +11,19 @@
 
     <!-- Metis Menu Plugin JavaScript -->
     <script src="js/metisMenu.min.js"></script>
+	
+	<!-- DataTables JavaScript -->
+    <script src="js/jquery.dataTables.min.js"></script>
+    <script src="js/dataTables.bootstrap.min.js"></script>
+    <script src="js/dataTables.responsive.js"></script>
 
     <!-- Custom Theme JavaScript -->
     <script src="js/sb-admin-2.js"></script>
+	
+	<?php
+		// if a page is requesting to add something to the footer, print it out
+		foreach ($footer as $index => $entry) echo "$entry\n"
+	?>
 
 </body>
 

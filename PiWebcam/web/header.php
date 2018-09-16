@@ -10,6 +10,9 @@ $message["info"] = array();
 $message["warning"] = array();
 $message["danger"] = array();
 
+// initialize footer 
+$footer = array();
+
 // run a given command in the PiWebcam shell and return its output
 function run($command) {
 	global $message;
@@ -85,6 +88,10 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
 
     <!-- MetisMenu CSS -->
     <link href="css/metisMenu.min.css" rel="stylesheet">
+	
+	<!-- DataTables CSS -->
+	<link href="css/dataTables.bootstrap.css" rel="stylesheet">
+	<link href="css/dataTables.responsive.css" rel="stylesheet">
 
     <!-- Custom CSS -->
     <link href="css/sb-admin-2.css" rel="stylesheet">
@@ -149,10 +156,13 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
                                     <a href="status.php"><i class="fa fa-dashboard fa-fw"></i> Status</a>
                                 </li>
                                 <li>
-                                    <a href="network.php"><i class="fa fa-video-camera fa-fw"></i> Network</a>
+                                    <a href="network.php"><i class="fa fa-signal fa-fw"></i> Network</a>
                                 </li>
                                 <li>
                                     <a href="system.php"><i class="fa fa-gears fa-fw"></i> System</a>
+                                </li>
+                                <li>
+                                    <a href="logs.php"><i class="fa fa-th-list fa-fw"></i> Logs</a>
                                 </li>
                             </ul>
                         </li>
