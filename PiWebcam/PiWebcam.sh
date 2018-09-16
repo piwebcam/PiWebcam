@@ -45,7 +45,7 @@ export DATA_DIR="$DATA_MOUNT_POINT/data"
 # where to persist our files (logs, notification queue, etc)
 PERSIST_DIR="$DATA_MOUNT_POINT/$MY_NAME"
 # location of the log file
-LOG_FILE=$PERSIST_DIR/$MY_NAME.log
+export LOG_FILE=$PERSIST_DIR/$MY_NAME.log
 # the directory through which pictures and movies are exposed inside the web root
 export PLAYBACK_DIR="playback"
 # the size of the root filesystem
@@ -126,14 +126,19 @@ function log {
 	# print out the message
 	echo -e "[\e[33m$MY_NAME\e[0m][$NOW] $1"
 	# save it in the log file (if the persist directory is available there, otherwise in /var/log)
-	echo "[$MY_NAME][$NOW] $1" >> $LOG_FILE
+	if [[ -z "$REMOTE_ADDR" ]]; then
+		REMOTE_ADDR="127.0.0.1"
+	fi
+	echo "[$NOW][$REMOTE_ADDR] $1" >> $LOG_FILE
 }
+if [ "$1" = "log" ]; then
+	log "$2"
+fi
 
 # show 
 function show_logs {
 	tail -200 $LOG_FILE
 }
-
 if [ "$1" = "show_logs" ]; then
 	show_logs
 fi
@@ -868,7 +873,7 @@ function configure_services {
 	# remove lighttpd default index file
 	rm -f $WEB_ROOT_DIR/index.lighttpd.html
 	# allow www-data user to run this script as root
-	echo "www-data ALL=(ALL) NOPASSWD:$MY_FILE" > /etc/sudoers.d/${MY_NAME}_www-data
+	echo "www-data ALL=(ALL) NOPASSWD:SETENV:$MY_FILE" > /etc/sudoers.d/${MY_NAME}_www-data
 	/etc/init.d/lighttpd restart
 		
 	### motion configuration
@@ -1486,6 +1491,7 @@ if [ "$1" = "checkup" ]; then
 	### clean up the log file if too big
 	MAX_LINES=1000
 	if [[ $(cat $LOG_FILE|wc -l) -gt $MAX_LINES ]]; then
+		log "Cleaning up log file $LOG_FILE"
 		echo "$(tail -$MAX_LINES $LOG_FILE)" > $LOG_FILE
 	fi
 fi

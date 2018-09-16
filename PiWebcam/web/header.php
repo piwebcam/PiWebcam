@@ -18,7 +18,7 @@ function run($command) {
 	global $message;
 	global $config;
 	if (array_key_exists("DEBUG",$config) && $config["DEBUG"]) array_push($message["info"],"$ ".$command);
-	$ret = shell_exec("sudo /boot/PiWebcam/PiWebcam.sh ".$command." 2>&1");
+	$ret = shell_exec("sudo REMOTE_ADDR=".$_SERVER["REMOTE_ADDR"]." /boot/PiWebcam/PiWebcam.sh ".$command." 2>&1");
 	if (array_key_exists("DEBUG",$config) && $config["DEBUG"]) array_push($message["info"],$ret);
 	return $ret;
 }
@@ -72,6 +72,13 @@ parse_text(run("env"),$env);
 
 // load the configuration
 load_config();
+
+// log the visited page
+$request = print_r($_REQUEST, true);
+$request = str_replace("Array","",$request);
+$request = str_replace("\n","",$request);
+$request = str_replace("()","",$request);
+run("log '".$_SERVER["REQUEST_METHOD"]." ".$_SERVER["PHP_SELF"]." ".$request."'");
 
 // unless no headers is requested, print out the header
 global $no_headers;

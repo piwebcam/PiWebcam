@@ -21,24 +21,32 @@
 														<tr>
 															<th>Date</th>
 															<th>Time</th>
-															<th>Log</th>
+															<th>IP</th>
+															<th>Log Entry</th>
 														</tr>
 													</thead>
 													<tbody>
 													<?php
 														// clean up and prepare the entry
-														$logs = str_replace("[PiWebcam]","",$logs);
 														$logs = array_reverse(explode("\n", $logs));
 														// print out all the entries
 														foreach ($logs as $index => $log) {
-															$log = explode("] ", $log);
-															$log[0] = str_replace("[","",$log[0]);
-															if ($log[0] == "") continue;
-															$timestamp = explode(" ", $log[0]);
+															preg_match('\'\\[([^\\]]+)\\]\\[([^\\]]+)\\] (.+)$\'',$log,$matches);
+															if (count($matches) != 4) continue;
+															$timestamp = $matches[1];
+															$remote_ip = $matches[2];
+															$log_entry = $matches[3];
+															if ($timestamp == "PiWebcam") {
+																// v1.0 log file
+																$timestamp = $remote_ip;
+																$remote_ip = "";
+															}
+															$timestamp = explode(" ", $timestamp);
 															echo "<tr class=\"odd\">\n";
 															echo "<td>".$timestamp[0]."</td>\n";
 															echo "<td>".$timestamp[1]."</td>\n";
-															echo "<td>".htmlspecialchars($log[1])."</td>\n";
+															echo "<td>".$remote_ip."</td>\n";
+															echo "<td>".htmlspecialchars($log_entry)."</td>\n";
 															echo "</tr>\n";
 														}
 														$load_table = <<<EOF
