@@ -1482,6 +1482,12 @@ if [ "$1" = "checkup" ]; then
 			configure_network
 		fi
 	fi
+	
+	### clean up the log file if too big
+	MAX_LINES=1000
+	if [[ $(cat $LOG_FILE|wc -l) -gt $MAX_LINES ]]; then
+		echo "$(tail -$MAX_LINES $LOG_FILE)" > $LOG_FILE
+	fi
 fi
 
 #############
