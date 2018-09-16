@@ -50,6 +50,12 @@
 		// factory reset form
 		if ($_REQUEST["action"] === "factory_reset") {
 			run("factory_reset");
+			run("reboot");
+		}
+		// data reset form
+		if ($_REQUEST["action"] === "data_reset") {
+			run("data_reset");
+			run("reboot");
 		}
 	}
 	
@@ -58,6 +64,7 @@
 	generate_modal("import_modal","Ensure the configuration file is valid. Please consider rebooting the device after applying the new settings.","import_button","import_form");
 	generate_modal("reboot_modal","The device will be rebooted. Please allow 1-2 minutes before reconnecting.","reboot_button","reboot_form");
 	generate_modal("factory_reset_modal","By restoring factory defaults all the current settings will be lost and the camera pictures/movies deleted.<br><br>This operation is irreversible.<br><br>The system will automatically reboot after restoring to its original state.<br>Please allow 1-2 minutes before reconnecting.","factory_reset_button","factory_reset_form");
+	generate_modal("data_reset_modal","All camera pictures/movies will be deleted but configuration settings will be kept.<br><br>The system will automatically reboot.<br>Please allow 1-2 minutes before reconnecting.","data_reset_button","data_reset_form");
 	generate_modal("upgrade_modal","The device is about to be upgraded.<br><br>The system might reboot to complete the process and process the update.<br>Please allow 1-2 minutes before reconnecting.","upgrade_button","upgrade_form");
 	
 	
@@ -178,20 +185,26 @@
 								<div class="col-lg-12">
 									<div class="panel panel-default">
 										<div class="panel-body">
-											<center>
-												<p>
+											<div class="row">
+												<div class="col-lg-4"><center>
 													<form id="reboot_form" method="POST" role="form">
 													<input type="hidden" name="action" value="reboot">
-														<button id="reboot_button" type="submit" onclick='$("#reboot_button").addClass("disabled"); $("#reboot_modal").modal("show");return false;' class="btn btn-outline btn-warning">Reboot Device</button>
-													</form>
-												</p>
-												<p>
+														<button id="reboot_button" type="submit" onclick='$("#reboot_button").addClass("disabled"); $("#reboot_modal").modal("show");return false;' class="btn btn-info">Reboot Device</button>
+													</form></center>
+												</div>
+												<div class="col-lg-4"><center>
+													<form id="data_reset_form" method="POST" role="form">
+													<input type="hidden" name="action" value="data_reset">
+														<button id="data_reset_button" type="submit" onclick='$("#data_reset_button").addClass("disabled"); $("#data_reset_modal").modal("show");return false;' class="btn btn-warning">Data Reset</button>
+													</form></center>
+												</div>
+												<div class="col-lg-4"><center>
 													<form id="factory_reset_form" method="POST" role="form">
 													<input type="hidden" name="action" value="factory_reset">
-														<button id="factory_reset_button" type="submit" onclick='$("#factory_reset_button").addClass("disabled"); $("#factory_reset_modal").modal("show");return false;' class="btn btn-danger">Restore Factory Settings</button>
-													</form>
-												</p>
-											</center>
+														<button id="factory_reset_button" type="submit" onclick='$("#factory_reset_button").addClass("disabled"); $("#factory_reset_modal").modal("show");return false;' class="btn btn-danger">Factory Reset</button>
+													</form></center>
+												</div>
+											</div>
 										</div>
 									</div>
 								</div>

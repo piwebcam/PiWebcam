@@ -178,13 +178,9 @@ function disable_write_root {
 	mount -o ro,remount /overlay/lower
 }
 
-# reset to factory defaults
-function factory_reset {
-	log "Resetting device"
-	# delete existing configuration file
-	enable_write_boot
-	rm -f $MY_CONFIG
-	disable_write_boot
+# format the data partition
+function data_reset {
+	log "Deleting user data"
 	# stop all the services
 	systemctl stop dnsmasq
 	systemctl stop hostapd
@@ -193,8 +189,21 @@ function factory_reset {
 	# format the data partition
 	umount -f $DATA_MOUNT_POINT
 	mkfs.f2fs -q $DATA_DEVICE
-	# reboot
-	reboot
+}
+
+if [ "$1" = "data_reset" ]; then
+	data_reset
+fi
+
+# reset to factory defaults
+function factory_reset {
+	log "Resetting device"
+	# delete existing configuration file
+	enable_write_boot
+	rm -f $MY_CONFIG
+	disable_write_boot
+	# format the data partition
+	data_reset
 }
 
 # factory reset
@@ -241,7 +250,6 @@ function restart_network {
 	ip addr flush dev $IFACE
 	systemctl start dhcpcd.service
 	systemctl restart networking.service
-	sleep 2
 }
 
 # load/reload configuration from file
@@ -389,8 +397,12 @@ if [ "$1" = "env" ]; then
 fi
 
 # show configuration file
-if [ "$1" = "show_config" ]; then
+function show_config {
 	cat $MY_CONFIG
+}
+
+if [ "$1" = "show_config" ]; then
+	show_config
 fi
 
 # import configuration from file ($2: configuration file)
@@ -1222,6 +1234,8 @@ function upgrade {
 		disable_write_boot
 		# deploy the admin panel
 		configure_admin_panel
+		# reboot
+		#reboot
 	fi
 }
 
@@ -1423,7 +1437,7 @@ if [ "$1" = "set" ]; then
 	if [[ -n "$KEY" ]]; then
 		# use the first parameter as variable name and the second as its value
 		VARIABLE_NAME=$KEY
-		eval $VARIABLE_NAME="$VALUE"
+		eval $VARIABLE_NAME=\""$VALUE"\"
 		log "Saving $VARIABLE_NAME = $VALUE"
 		# save the configuration
 		save_config
