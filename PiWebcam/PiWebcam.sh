@@ -1103,25 +1103,38 @@ if [ "$1" = "configure" ]; then
 	# adjust system settings
 	log "Configuring bash"
 	echo "source $MY_FILE" >> /etc/bash.bashrc
+	
 	log "Configuring to reboot on kernel panic"
 	sysctl -w kernel.panic=10
 	sysctl -w kernel.panic_on_oops=1
+	
 	log "Customizing motd"
 	base64 -d <<<"X19fX19fIF8gXyAgICBfICAgICAgXwp8IF9fXyAoXykgfCAgfCB8ICAgIHwgfAp8IHxfLyAvX3wg
 fCAgfCB8IF9fX3wgfF9fICAgX19fIF9fIF8gXyBfXyBfX18KfCAgX18vfCB8IHwvXHwgfC8gXyBc
 ICdfIFwgLyBfXy8gXyBfIFwKfCB8ICAgfCBcICAvXCAgLyAgX18vIHxfKSB8IChffCAoX3wgfCB8
 IHwgfCB8IHwKXF98ICAgfF98XC8gIFwvIFxfX198Xy5fXy8gXF9fX1xfXyxffF98IHxffCB8X3wK
 Cgo=" > /etc/motd
+	
 	log "Disabling under-voltage warnings"
 	sed -i '1s/^/:msg, contains, \"oltage\" stop\n/' /etc/rsyslog.conf
 	systemctl restart rsyslog
+	
 	log "Disabling swap"
 	dphys-swapfile swapoff
 	dphys-swapfile uninstall
 	systemctl stop dphys-swapfile
 	systemctl disable dphys-swapfile
+	
 	log "Disabling cron email notifications"
 	sed -i '1s/^/MAILTO=""\n/' /etc/crontab
+	
+	log "Removing unnecessary cron jobs"
+	rm -f /etc/cron.daily/apt-compat
+	rm -f /etc/cron.daily/aptitude
+	rm -f /etc/cron.daily/bsdmainutils
+	rm -f /etc/cron.daily/man-db
+	rm -f /etc/cron.weekly/man-db
+	
 	log "Disabling Power Management on WiFi interface"
 	iw dev $IFACE set power_save off
 	if [ ! -f $MY_CONFIG ]; then
@@ -1136,6 +1149,7 @@ Cgo=" > /etc/motd
 	if [ ! -d $PERSIST_DIR ]; then
 		mkdir -p $PERSIST_DIR
 	fi
+	
 	log "Deploying the admin web panel"
 	configure_admin_panel
 	
