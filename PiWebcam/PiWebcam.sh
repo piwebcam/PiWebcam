@@ -227,14 +227,18 @@ if [ "$1" = "factory_reset" ]; then
 	factory_reset
 fi
 
-# reboot
-if [ "$1" = "reboot" ]; then
+function hard_reboot {
 	log "Rebooting the device"
 	# sync the filesystem
 	sync
 	# hard reboot to avoid getting blocked while stopping the services
 	echo 1 > /proc/sys/kernel/sysrq
 	echo b > /proc/sysrq-trigger
+}
+
+# reboot
+if [ "$1" = "reboot" ]; then
+	hard_reboot
 fi
 
 # write a default network configuration
@@ -1132,6 +1136,7 @@ Cgo=" > /etc/motd
 	rm -f /etc/cron.daily/apt-compat
 	rm -f /etc/cron.daily/aptitude
 	rm -f /etc/cron.daily/bsdmainutils
+	rm -f /etc/cron.daily/dpkg
 	rm -f /etc/cron.daily/man-db
 	rm -f /etc/cron.weekly/man-db
 	
@@ -1250,12 +1255,15 @@ function import_firmware {
 		log "Executing upgrade routine on file $FILE"
 		if [ -f $FILE ]; then
 			chmod 755 $FILE
-			$FILE upgrade $MY_VERSION
+			$FILE upgrade $MY_VERSION &
 		else
 			log "Invalid firmware, $FILE not found"
 		fi
 	fi
 }
+if [ "$1" = "import_firmware" ]; then
+	import_firmware $2
+fi
 
 # run the upgrade routine ($1: version we are upgrading from)
 function upgrade {
@@ -1270,7 +1278,7 @@ function upgrade {
 			enable_write_boot
 			# backup current version
 			local BACKUP_DIR="$MY_DIR/backup/v$1"
-			log "Backuping up current version in $BACKUP_DIR"
+			log "Backing up current version in $BACKUP_DIR"
 			rm -rf $BACKUP_DIR
 			mkdir -p $BACKUP_DIR
 			mv $MY_DIR/* $BACKUP_DIR
@@ -1326,19 +1334,34 @@ function upgrade {
 			# deploy the admin panel
 			configure_admin_panel
 			# reboot
-			#reboot
+			hard_reboot
 		else
-			log "ERROR: an internet connection required to run the upgrade"
+			log "ERROR: an internet connection is required to run the upgrade"
 		fi
 	fi
 }
-
-# CLI
-if [ "$1" = "import_firmware" ]; then
-	import_firmware $2
-fi
 if [ "$1" = "upgrade" ]; then
 	upgrade $2
+fi
+
+# downgrade to a given version ($1: version to downgrade to)
+if [ "$1" = "downgrade" ]; then
+	local BACKUP_DIR="$MY_DIR/backup/v$2"
+	if [[ -n "$2" && -d "$BACKUP_DIR" ]]; then
+		enable_write_boot
+		# backup current version
+		BACKUP_DIR="$MY_DIR/backup/v$2"
+		# clean up our directory
+		mv $MY_DIR/backup /tmp
+		rm -rf $MY_DIR/*
+		mv /tmp/backup $MY_DIR/backup 
+		# restore backup
+		log "Downgrading to v$2 from $BACKUP_DIR"
+		cp -R $BACKUP_DIR/* $MY_DIR
+		disable_write_boot
+		# deploy the admin panel
+		configure_admin_panel
+	fi
 fi
 
 #################

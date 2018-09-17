@@ -36,8 +36,8 @@
 				// import the firmware
 				run("import_firmware '".$_FILES["file"]["tmp_name"]."'");
 				load_config();
-				array_push($message["success"],"Device updated successfully");
-			} else array_push($message["warning"],"Invalid firmware provided");
+				array_push($message["warning"],"Device update is in progress. Please wait until the system restarts");
+			} else array_push($message["danger"],"Invalid firmware provided");
 		}
 		// reboot form
 		if ($_REQUEST["action"] === "reboot") {
@@ -58,10 +58,10 @@
 	// generate the modals
 	generate_modal("confirm_modal","If the password has changed, you will need to re-authenticate with the new credentials.<br><br>If the hostname has changed, please consider rebooting the device after applying the new settings.","button","form");
 	generate_modal("import_modal","Ensure the configuration file is valid. Please consider rebooting the device after applying the new settings.","import_button","import_form");
-	generate_modal("reboot_modal","The device will be rebooted. Please allow 1-2 minutes before reconnecting.","reboot_button","reboot_form");
-	generate_modal("factory_reset_modal","By restoring factory defaults all the current settings will be lost and the camera pictures/movies deleted.<br><br>This operation is irreversible.<br><br>The system will automatically reboot after restoring to its original state.<br>Please allow 1-2 minutes before reconnecting.","factory_reset_button","factory_reset_form");
-	generate_modal("data_reset_modal","All camera pictures/movies will be deleted but configuration settings will be kept.<br><br>The system will automatically reboot.<br>Please allow 1-2 minutes before reconnecting.","data_reset_button","data_reset_form");
-	generate_modal("upgrade_modal","The device is about to be upgraded.<br><br>The system might reboot to complete the process and process the update.<br>Please allow 1-2 minutes before reconnecting.","upgrade_button","upgrade_form");
+	generate_modal("reboot_modal","The device will be rebooted. Please allow 2-3 minutes before reconnecting.","reboot_button","reboot_form");
+	generate_modal("factory_reset_modal","By restoring factory defaults all the current settings will be lost and the camera pictures/movies deleted.<br><br>This operation is irreversible.<br><br>The system will automatically reboot after restoring to its original state.<br>Please allow 2-3 minutes before reconnecting.","factory_reset_button","factory_reset_form");
+	generate_modal("data_reset_modal","All camera pictures/movies will be deleted but configuration settings will be kept.<br><br>The system will automatically reboot.<br>Please allow 2-3 minutes before reconnecting.","data_reset_button","data_reset_form");
+	generate_modal("upgrade_modal","The device is about to be upgraded.<br><br>The system might reboot to complete the process and process the update.<br>Please allow 3-5 minutes before reconnecting.","upgrade_button","upgrade_form");
 	
 	
 	include "messages.php";

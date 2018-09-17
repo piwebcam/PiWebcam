@@ -3,6 +3,7 @@
 // global variables
 $config = array();
 $env = array();
+set_time_limit(0);
 
 // initialize the different message types
 $message["success"] = array();
