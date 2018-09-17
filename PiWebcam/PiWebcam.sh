@@ -165,6 +165,15 @@ function filesystem_full {
 	false
 }
 
+# stop all the services
+function stop_services {
+	log "Stopping services"
+	systemctl stop dnsmasq
+	systemctl stop hostapd
+	systemctl stop motion
+	systemctl stop lighttpd
+}
+
 # enable writing in the boot filesystem
 function enable_write_boot {
 	# remount boot in read/write
@@ -193,12 +202,7 @@ function disable_write_root {
 # format the data partition
 function data_reset {
 	log "Deleting user data"
-	# stop all the services
-	systemctl stop dnsmasq
-	systemctl stop hostapd
 	systemctl stop motion
-	systemctl stop lighttpd
-	# format the data partition
 	umount -f $DATA_MOUNT_POINT
 	mkfs.f2fs -q $DATA_DEVICE
 }
@@ -226,7 +230,11 @@ fi
 # reboot
 if [ "$1" = "reboot" ]; then
 	log "Rebooting the device"
-	reboot
+	# sync the filesystem
+	sync
+	# hard reboot to avoid getting blocked while stopping the services
+	echo 1 > /proc/sys/kernel/sysrq
+	echo b > /proc/sysrq-trigger
 fi
 
 # write a default network configuration
@@ -716,10 +724,7 @@ function installer {
 		echo -e 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";' | sudo tee /etc/apt/apt.conf.d/00_disable-cache-files
 		# stop and disable all the services
 		log "Disabling services"
-		systemctl stop dnsmasq
-		systemctl stop hostapd
-		systemctl stop motion
-		systemctl stop lighttpd
+		stop_services
 		systemctl disable hostapd
 		systemctl disable dnsmasq
 		systemctl disable motion
@@ -1166,6 +1171,54 @@ if [ "$1" = "configure_notifications" ]; then
 	configure_notifications
 fi
 
+#############
+# Chroot
+#############
+
+# mount the root filesystem as read-write and chroot into it ($1: optional command to run)
+function chroot_lower {
+	# root read-only filesystem
+	ROOT="/overlay/lower"
+	# remount root and boot as read-write
+	mount -o remount,rw $ROOT
+	mount -o remount,rw /boot
+	# mount other virtual filesystems underneath the root filesystem
+	if [ -d $ROOT/proc ]; then
+		mount -t proc proc $ROOT/proc
+	fi
+	if [ -d $ROOT/sys ]; then
+		mount -t sysfs sys $ROOT/sys
+	fi
+	for DIR in dev dev/pts boot run; do
+		if [ -d $ROOT/$DIR ]; then
+			mount -o bind /$DIR $ROOT/$DIR
+		fi
+	done
+	# chroot into the filesystem
+	if [[ -n "$1"  ]]; then
+		# chroot into the root filesystem and run a command
+		chroot $ROOT /bin/bash -c "$1"
+	else
+		# just chroot into the root filesystem
+		chroot $ROOT
+	fi
+	
+	# done editing, sync and umount virtual filesystems
+	sync
+	umount $ROOT/proc
+	umount $ROOT/sys
+	for DIR in dev/pts dev boot run; do
+		umount $ROOT/$DIR
+	done
+	# remount the boot and root filesystem as read-only
+	mount -o remount,ro /boot
+	mount -o remount,ro $ROOT
+}
+
+if [ "$1" = "chroot" ]; then
+	chroot_lower "$2"
+fi
+
 #################
 # Upgrade
 #################
@@ -1193,66 +1246,76 @@ function import_firmware {
 # run the upgrade routine ($1: version we are upgrading from)
 function upgrade {
 	if [[ -n "$1" ]]; then
-		log "Upgrading from v$1 to v$MY_VERSION"
-		# install dependencies
-		which jq >/dev/null || apt-get -y install jq
-		enable_write_boot
-		# backup current version
-		local BACKUP_DIR="$MY_DIR/backup/v$1"
-		rm -rf $BACKUP_DIR
-		mkdir -p $BACKUP_DIR
-		mv $MY_DIR/* $BACKUP_DIR
-		# copy in the new files
-		cp -R $MY_NAME/* $MY_DIR
-		# upgrade configuration file
-		if [[ -n "$NAME" ]]; then
-			DEVICE_NAME=$NAME
-		fi
-		if [[ -n "$PASSWORD" ]]; then
-			DEVICE_PASSWORD=$PASSWORD
-		fi
-		if [[ -n "$TIMEZONE" ]]; then
-			DEVICE_TIMEZONE=$TIMEZONE
-		fi
-		if [[ -n "$COUNTRY_CODE" ]]; then
-			DEVICE_COUNTRY_CODE=$COUNTRY_CODE
-		fi
-		if [[ -n "$AP_PASSPHRASE" ]]; then
-			WIFI_AP_PASSPHRASE=$AP_PASSPHRASE
-		fi
-		if [[ -n "$WIFI_SSID" ]]; then
-			WIFI_CLIENT_SSID=$WIFI_SSID
-		fi
-		if [[ -n "$WIFI_PASSPHRASE" ]]; then
-			WIFI_CLIENT_PASSPHRASE=$WIFI_PASSPHRASE
-		fi
-		if [[ -n "$REMOTE_ACCESS" ]]; then
-			NETWORK_REMOTE_ACCESS=$REMOTE_ACCESS
-		fi
-		if [[ -n "$DISABLE_MOVIE" ]]; then
-			if [[ $DISABLE_MOVIE = 0 ]]; then
-				MOTION_MOVIE=1
-			else
-				MOTION_MOVIE=0
+		if [[ $(eval $INTERNET) = "1" ]]; then
+			log "Upgrading from v$1 to v$MY_VERSION"
+			# install dependencies
+			log "Installing dependencies"
+			if ! which jq >/dev/null; then
+				chroot_lower "apt-get update; apt-get -y install jq"
 			fi
+			enable_write_boot
+			# backup current version
+			local BACKUP_DIR="$MY_DIR/backup/v$1"
+			log "Backuping up current version in $BACKUP_DIR"
+			rm -rf $BACKUP_DIR
+			mkdir -p $BACKUP_DIR
+			mv $MY_DIR/* $BACKUP_DIR
+			# copy in the new files
+			log "Copying new files"
+			cp -R $MY_NAME/* $MY_DIR
+			# upgrade configuration file
+			log "Upgrading configuration file"
+			if [[ -n "$NAME" ]]; then
+				DEVICE_NAME=$NAME
+			fi
+			if [[ -n "$PASSWORD" ]]; then
+				DEVICE_PASSWORD=$PASSWORD
+			fi
+			if [[ -n "$TIMEZONE" ]]; then
+				DEVICE_TIMEZONE=$TIMEZONE
+			fi
+			if [[ -n "$COUNTRY_CODE" ]]; then
+				DEVICE_COUNTRY_CODE=$COUNTRY_CODE
+			fi
+			if [[ -n "$AP_PASSPHRASE" ]]; then
+				WIFI_AP_PASSPHRASE=$AP_PASSPHRASE
+			fi
+			if [[ -n "$WIFI_SSID" ]]; then
+				WIFI_CLIENT_SSID=$WIFI_SSID
+			fi
+			if [[ -n "$WIFI_PASSPHRASE" ]]; then
+				WIFI_CLIENT_PASSPHRASE=$WIFI_PASSPHRASE
+			fi
+			if [[ -n "$REMOTE_ACCESS" ]]; then
+				NETWORK_REMOTE_ACCESS=$REMOTE_ACCESS
+			fi
+			if [[ -n "$DISABLE_MOVIE" ]]; then
+				if [[ $DISABLE_MOVIE = 0 ]]; then
+					MOTION_MOVIE=1
+				else
+					MOTION_MOVIE=0
+				fi
+			fi
+			if [[ -n "$RESOLUTION" ]]; then
+				CAMERA_RESOLUTION=$RESOLUTION
+			fi
+			if [[ -n "$ROTATE" ]]; then
+				CAMERA_ROTATE=$ROTATE
+			fi
+			if [[ -n "$FRAMERATE" ]]; then
+				CAMERA_FRAMERATE=$FRAMERATE
+			fi
+			save_config
+			# reload configuration file
+			load_config
+			disable_write_boot
+			# deploy the admin panel
+			configure_admin_panel
+			# reboot
+			#reboot
+		else
+			log "ERROR: an internet connection required to run the upgrade"
 		fi
-		if [[ -n "$RESOLUTION" ]]; then
-			CAMERA_RESOLUTION=$RESOLUTION
-		fi
-		if [[ -n "$ROTATE" ]]; then
-			CAMERA_ROTATE=$ROTATE
-		fi
-		if [[ -n "$FRAMERATE" ]]; then
-			CAMERA_FRAMERATE=$FRAMERATE
-		fi
-		save_config
-		# reload configuration file
-		load_config
-		disable_write_boot
-		# deploy the admin panel
-		configure_admin_panel
-		# reboot
-		#reboot
 	fi
 }
 
@@ -1262,44 +1325,6 @@ if [ "$1" = "import_firmware" ]; then
 fi
 if [ "$1" = "upgrade" ]; then
 	upgrade $2
-fi
-
-#############
-# Chroot
-#############
-
-# mount the root filesystem as read-write and chroot into it
-if [ "$1" = "chroot" ]; then
-	# root read-only filesystem
-	ROOT="/overlay/lower"
-	# remount root and boot as read-write
-	mount -o remount,rw $ROOT
-	mount -o remount,rw /boot
-	# mount other virtual filesystems underneath the root filesystem
-	if [ -d $ROOT/proc ]; then
-		mount -t proc proc $ROOT/proc
-	fi
-	if [ -d $ROOT/sys ]; then
-		mount -t sysfs sys $ROOT/sys
-	fi
-	for DIR in dev dev/pts boot run; do
-		if [ -d $ROOT/$DIR ]; then
-			mount -o bind /$DIR $ROOT/$DIR
-		fi
-	done
-	# chroot into the filesystem
-	chroot $ROOT
-	
-	# done editing, sync and umount virtual filesystems
-	sync
-	umount $ROOT/proc
-	umount $ROOT/sys
-	for DIR in dev/pts dev boot run; do
-		umount $ROOT/$DIR
-	done
-	# remount the boot and root filesystem as read-only
-	mount -o remount,ro /boot
-	mount -o remount,ro $ROOT
 fi
 
 #################
