@@ -353,11 +353,12 @@ Additionally, any setting exposed through the web interface, can also be set pro
 
 ** Mount the root filesystem as read-write and chroot into it **
 
-`sudo /boot/PiWebcam/PiWebcam.sh chroot`
+`sudo /boot/PiWebcam/PiWebcam.sh chroot [command]`
 
 * remount root and boot filesystems as read-write
 * mount other virtual filesystems underneath the root filesystem
 * chroot into the filesystem to allow performing persistent changes to the root filesystem
+* run an optional command provided
 * once exited, sync and umount virtual filesystems
 * remount the boot and root filesystem as read-only
 

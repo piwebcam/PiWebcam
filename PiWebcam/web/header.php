@@ -95,7 +95,7 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title><?php print $env["MY_NAME"] ?></title>
+    <title>[<?php print $env["MY_NAME"] ?>] <?php print $config["DEVICE_NAME"]?></title>
 
     <!-- Bootstrap Core CSS -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
