@@ -1352,7 +1352,7 @@ if [ "$1" = "status" ]; then
 	echo "SYSTEM_TEMP="`vcgencmd measure_temp|cut -d '=' -f2|cut -d '.' -f1`
 	echo "SERVICE_MOTION="`ps uax|grep /usr/bin/motion|grep -v grep|wc -l`
 	echo "SERVICE_AP="`ps uax|grep /usr/sbin/hostapd|grep -v grep|wc -l`
-	echo "NETWORK_IP="`hostname -I 2>/dev/null`
+	echo "NETWORK_IP="`hostname -I 2>/dev/null |cut -d' ' -f1`
 	echo "NETWORK_INTERNET="$(eval $INTERNET)
 	if iwconfig $IFACE|grep -q "Mode:Master"; then
 		echo "WIFI_SSID="`cat $AP_CONFIG |grep ^ssid|cut -d "=" -f2`
