@@ -25,18 +25,22 @@
 												<div class="checkbox">
 													<label>
 														<input type='hidden' value="0" name="EMAIL_ENABLE">
-														<input value="1" name="EMAIL_ENABLE" type="checkbox"<?php if ($config["EMAIL_ENABLE"] === "1") print " checked"; ?>>Enable e-mail notifications
+														<input value="1" name="EMAIL_ENABLE" type="checkbox"
+														<?php if ($config["EMAIL_ENABLE"] === "1") print " checked"; ?> 
+														onchange='this.checked ? $("#EMAIL_TO,#EMAIL_SERVER").prop("required",true) : $("#EMAIL_TO,#EMAIL_SERVER").prop("required",false)'>Enable e-mail notifications
 													</label>
 												</div>
 												<p class="help-block">When a motion is detected, the snapshot is attached to an e-mail message and sent to the configured recipients</p>
 												<div class="form-group">
 													<label>Recipients</label>
-													<input name="EMAIL_TO" class="form-control" value="<?php print $config["EMAIL_TO"]; ?>">
+													<input id="EMAIL_TO" name="EMAIL_TO" class="form-control" value="<?php print $config["EMAIL_TO"]; ?>" 
+													<?php if ($config["EMAIL_ENABLE"] === "1") print " required" ?>>
 													<p class="help-block">The e-mail address the notification has to be sent to. For multiple recipients, separate them with comma (e.g. <i>user1@gmail.com, user2@gmail.com</i>).</p>
 												</div>
 												<div class="form-group">
 													<label>Mail Server</label>
-													<input name="EMAIL_SERVER" class="form-control" value="<?php print $config["EMAIL_SERVER"]; ?>">
+													<input id="EMAIL_SERVER" name="EMAIL_SERVER" class="form-control" value="<?php print $config["EMAIL_SERVER"]; ?>" 
+													<?php if ($config["EMAIL_ENABLE"] === "1") print " required" ?>>
 													<p class="help-block">The mail server to use (e.g. <i>smtp.gmail.com:587</i>) </p>
 												</div>
 												<div class="checkbox">
@@ -66,18 +70,22 @@
 												<div class="checkbox">
 													<label>
 														<input type='hidden' value="0" name="SLACK_ENABLE">
-														<input value="1" name="SLACK_ENABLE" type="checkbox"<?php if ($config["SLACK_ENABLE"] === "1") print " checked"; ?>>Enable Slack notifications
+														<input value="1" name="SLACK_ENABLE" type="checkbox"
+														<?php if ($config["SLACK_ENABLE"] === "1") print " checked"; ?>
+														onchange='this.checked ? $("#SLACK_TOKEN,#SLACK_CHANNEL").prop("required",true) : $("#SLACK_TOKEN,#SLACK_CHANNEL").prop("required",false)'>Enable Slack notifications
 													</label>
 												</div>
 												<p class="help-block">When a motion is detected, the snapshot is posted on the configured slack channel</p>
 												<div class="form-group">
 													<label>Token</label>
-													<input name="SLACK_TOKEN" class="form-control" value="<?php print $config["SLACK_TOKEN"]; ?>">
+													<input id="SLACK_TOKEN" name="SLACK_TOKEN" class="form-control" value="<?php print $config["SLACK_TOKEN"]; ?>" 
+													<?php if ($config["SLACK_ENABLE"] === "1") print " required" ?>>
 													<p class="help-block">The token used for authenticating against Slack. Click <a target="_blank" href="https://api.slack.com/custom-integrations/legacy-tokens">HERE</a> for generating a new token.</p>
 												</div>
 												<div class="form-group">
 													<label>Channel</label>
-													<input name="SLACK_CHANNEL" class="form-control" value="<?php print $config["SLACK_CHANNEL"]; ?>">
+													<input id="SLACK_CHANNEL" name="SLACK_CHANNEL" class="form-control" value="<?php print $config["SLACK_CHANNEL"]; ?>" 
+													<?php if ($config["SLACK_ENABLE"] === "1") print " required" ?>>
 													<p class="help-block">The slack channel to upload the snapshot once motion is detected(<i>e.g. #general</i>)</p>
 												</div>
 											</div>

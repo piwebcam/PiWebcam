@@ -82,7 +82,7 @@
 											<input type="hidden" name="action" value="system">
 												<div class="form-group">
 													<label>Name</label>
-													<input class="form-control" name="DEVICE_NAME" value="<?php print $config["DEVICE_NAME"] ?>">
+													<input class="form-control" name="DEVICE_NAME" value="<?php print $config["DEVICE_NAME"] ?>" required>
 													<p class="help-block">The name of this device</p>
 												</div>
 												<div class="form-group">
