@@ -31,6 +31,8 @@ export MY_FILE="$MY_DIR/$MY_NAME.sh"
 MY_CONFIG="$MY_DIR/$MY_NAME.conf"
 # boostrap style of the main panel of the web interface
 export MY_WEB_PANEL_STYLE="primary"
+# where to store backup of previous versions during upgrade
+MY_BACKUP_DIR="$MY_DIR/backup"
 # the wlan interface
 IFACE="wlan0"
 # the default hostname and password
@@ -93,7 +95,8 @@ INITRAMFS_MODULES="/etc/initramfs-tools/modules"
 INITRAMFS_HOOKS="/etc/initramfs-tools/hooks/$MY_NAME"
 INITRAMFS_PREMOUNT_SCRIPT="/etc/initramfs-tools/scripts/local-premount/${MY_NAME}"
 INITRAMFS_BOTTOM_SCRIPT="/etc/initramfs-tools/scripts/init-bottom/${MY_NAME}"
-INITRAMFS_IMAGE="/boot/init.gz"
+INITRAMFS_IMAGE="/boot/initramfs.img"
+INITRAMFS_IMAGE7="/boot/initramfs7.img"
 
 #################
 # init
@@ -696,10 +699,18 @@ exit 0
 
 # create the initramfs image
 function install_initramfs {
-	log "Installing initramfs image"
-	mkinitramfs -o $INITRAMFS_IMAGE
-	# make initramfs loading at boot time
-	append "initramfs init.gz" $PI_CONFIG
+	KERNEL=`ls /lib/modules|grep -v v7|head -1`
+	KERNEL7=`ls /lib/modules|grep v7|head -1`
+	log "Installing initramfs image for kernel $KERNEL"
+	mkinitramfs -k $KERNEL -o $INITRAMFS_IMAGE
+	log "Installing initramfs image for kernel $KERNEL7"
+	mkinitramfs -k $KERNEL7 -o $INITRAMFS_IMAGE7
+	# make initramfs loading at boot time the right initramfs depending on the hardware
+	echo "[pi0]" >> $PI_CONFIG
+	echo "initramfs "`basename $INITRAMFS_IMAGE`" followkernel" >> $PI_CONFIG
+	echo "[pi3]" >> $PI_CONFIG
+	echo "initramfs "`basename $INITRAMFS_IMAGE7`" followkernel" >> $PI_CONFIG
+	echo  "[all]" >> $PI_CONFIG
 }
 
 # installation and basic configuration
@@ -873,10 +884,10 @@ function configure_system {
 	if [[ $DEVICE_LED == 0 ]]; then
 		log "Turning off the LEDs"
 		echo none | tee /sys/class/leds/led0/trigger
-		echo 1 | tee /sys/class/leds/led0/brightness
+		echo 0 | tee /sys/class/leds/led0/brightness
 		if [[ -x "/sys/class/leds/led1" ]]; then
 			echo none | tee /sys/class/leds/led1/trigger
-			echo 1 | tee /sys/class/leds/led1/brightness
+			echo 0 | tee /sys/class/leds/led1/brightness
 		fi
 	else
 		echo mmc0 | tee /sys/class/leds/led0/trigger
@@ -1310,26 +1321,42 @@ function upgrade {
 	if [[ -n "$1" ]]; then
 		if [[ $(eval $INTERNET) = "1" ]]; then
 			log "Upgrading from v$1 to v$MY_VERSION"
+			enable_write_boot
+			
 			# install dependencies
 			log "Installing dependencies"
 			if ! which jq >/dev/null; then
 				chroot_lower "apt-get update; apt-get -y install jq"
 			fi
-			# configure services
+			
+			# update the system configuration
 			if systemctl status apt-daily.service|grep -q ExecStart; then
+				# the apt daily service slow down the device at boot and consumes a lot of CPU
+				log "Disable apt daily service"
 				chroot_lower "systemctl disable apt-daily.service; systemctl disable apt-daily.timer; systemctl disable apt-daily-upgrade.timer; systemctl disable apt-daily-upgrade.service"
-			fi 
-			enable_write_boot
+			fi
+			if [ ! -f $INITRAMFS_IMAGE7 ]; then
+				# create two initramfs for each available kernel so the SD card can be moved across devices
+				log "Updating initramfs"
+				# remove old entry
+				rm -f /boot/init.gz
+				sed -i '/initramfs init.gz/d' $PI_CONFIG
+				# installing new initramfs images
+				install_initramfs
+			fi
+
 			# backup current version
-			local BACKUP_DIR="$MY_DIR/backup/v$1"
-			log "Backing up current version in $BACKUP_DIR"
-			rm -rf $BACKUP_DIR
-			mkdir -p $BACKUP_DIR
-			mv $MY_DIR/* $BACKUP_DIR
+			BACKUP_FILE="$MY_BACKUP_DIR/${MY_NAME}_v$1.zip"
+			log "Backing up current version in $BACKUP_FILE"
+			mkdir -p $MY_BACKUP_DIR
+			rm -f $BACKUP_FILE
+			zip -mr $BACKUP_FILE $MY_DIR -x "${MY_BACKUP_DIR}*"
+			
 			# copy in the new files
 			log "Copying new files"
 			cp -R $MY_NAME/* $MY_DIR
-			# upgrade configuration file
+			
+			# upgrade the configuration file
 			log "Upgrading configuration file"
 			if [[ -n "$NAME" ]]; then
 				DEVICE_NAME=$NAME
@@ -1390,18 +1417,16 @@ fi
 
 # downgrade to a given version ($1: version to downgrade to)
 if [ "$1" = "downgrade" ]; then
-	local BACKUP_DIR="$MY_DIR/backup/v$2"
-	if [[ -n "$2" && -d "$BACKUP_DIR" ]]; then
+	if [[ -n "$2" && -d "$MY_BACKUP_DIR" ]]; then
+		BACKUP_FILE="$MY_BACKUP_DIR/${MY_NAME}_v$2.zip"
 		enable_write_boot
-		# backup current version
-		BACKUP_DIR="$MY_DIR/backup/v$2"
 		# clean up our directory
 		mv $MY_DIR/backup /tmp
 		rm -rf $MY_DIR/*
 		mv /tmp/backup $MY_DIR/backup 
 		# restore backup
-		log "Downgrading to v$2 from $BACKUP_DIR"
-		cp -R $BACKUP_DIR/* $MY_DIR
+		log "Downgrading to v$2 from $BACKUP_FILE"
+		unzip $BACKUP_FILE -d /
 		disable_write_boot
 		# deploy the admin panel
 		configure_admin_panel
