@@ -284,15 +284,16 @@ function load_config {
 
 # save configuration to file
 function save_config {
-	# set default name if not set
+	# set default values
 	if [[ -z "$DEVICE_NAME" ]]; then
 		DEVICE_NAME="$DEFAULT_NAME"
 	fi
-	# set default password if not set
 	if [[ -z "$DEVICE_PASSWORD" ]]; then
 		DEVICE_PASSWORD="$DEFAULT_PASSWORD"
 	fi
-	# start in AP mode if no mode is set
+	if [[ -z "$DEVICE_LED" ]]; then
+		DEVICE_LED=1
+	fi
 	if [[ -z "$WIFI_MODE" ]]; then
 		WIFI_MODE="AP"
 		WIFI_AP_PASSPHRASE="$DEFAULT_PASSWORD"
@@ -300,7 +301,6 @@ function save_config {
 	if [[ -z "$NETWORK_REMOTE_ACCESS" ]]; then
 		NETWORK_REMOTE_ACCESS=0
 	fi
-	# set default settings for the camera
 	if [[ -z "$CAMERA_RESOLUTION" ]]; then
 		CAMERA_RESOLUTION="640x480"
 	fi
@@ -328,7 +328,6 @@ function save_config {
 	if [[ -z "$AI_KEEP_NOT_FOUND" ]]; then
 		AI_KEEP_NOT_FOUND=0
 	fi
-	# set default settings for the notifications
 	if [[ -z "$EMAIL_ENABLE" ]]; then
 		EMAIL_ENABLE=0
 	fi
@@ -343,14 +342,16 @@ function save_config {
 	cat > $MY_CONFIG <<-EOF
 ### $MY_NAME v$MY_VERSION
 
-# name of the device
+# The name of the device
 DEVICE_NAME='$DEVICE_NAME'
-# password of the device (for both web and ssh)
+# The password of the device (for both web and ssh)
 DEVICE_PASSWORD='$DEVICE_PASSWORD'
-# timezone of the device that be used for displaying the right time
+# The timezone of the device that be used for displaying the right time
 DEVICE_TIMEZONE='$DEVICE_TIMEZONE'
-# country code of the device for connecting to the WiFi network
+# The country code of the device for connecting to the WiFi network
 DEVICE_COUNTRY_CODE='$DEVICE_COUNTRY_CODE'
+# If uncheched both the red and the green leds on the board will be turned off (default: checked)
+DEVICE_LED='$DEVICE_LED'
 
 # WiFi mode for connecting to an existing WiFi network ("CLIENT") or acting as an access point ("AP")
 WIFI_MODE='$WIFI_MODE'
@@ -859,6 +860,19 @@ function configure_system {
 	if [[ -n "$DEVICE_COUNTRY_CODE" ]]; then
 		log "Configuring country code to $DEVICE_COUNTRY_CODE"
 		raspi-config nonint do_wifi_country "$DEVICE_COUNTRY_CODE"
+	fi
+	
+	# LEDs
+	if [[ $DEVICE_LED == 0 ]]; then
+		log "Turning off the LEDs"
+		if [[ -x "/sys/class/leds/led0" ]]; then
+			echo none | tee /sys/class/leds/led0/trigger
+			echo 1 | tee /sys/class/leds/led0/brightness
+		fi
+		if [[ -x "/sys/class/leds/led1" ]]; then
+			echo none | tee /sys/class/leds/led1/trigger
+			echo 1 | tee /sys/class/leds/led1/brightness
+		fi
 	fi
 }
 

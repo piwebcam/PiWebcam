@@ -192,10 +192,10 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
         <div id="page-wrapper">
             <div class="row">
                 <div class="col-lg-12">
-                    <h1 class="page-header">
+                    <h2 class="page-header">
 					<img class="logo" src="images/logo.png"> 
 					<?php print $config["DEVICE_NAME"]; ?>
-					</h1>
+					</h2>
                 </div>
             </div>
 <?php

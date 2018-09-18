@@ -2,7 +2,7 @@
 	include "header.php";
 	// form submitted
 	if(count($_REQUEST) > 0) {
-		save_config(array('CAMERA_RESOLUTION','CAMERA_ROTATE','CAMERA_FRAMERATE','MOTION_MOVIE','MOTION_THRESHOLD','MOTION_FRAMES','MOTION_EVENT_GAP','AI_ENABLE','AI_TOKEN','AI_OBJECT','AI_THRESHOLD'));
+		save_config(array('CAMERA_RESOLUTION','CAMERA_ROTATE','CAMERA_FRAMERATE','MOTION_MOVIE','MOTION_THRESHOLD','MOTION_FRAMES','MOTION_EVENT_GAP','AI_ENABLE','AI_TOKEN','AI_OBJECT','AI_THRESHOLD','AI_KEEP_NOT_FOUND'));
 		run("configure_camera");
 		load_config();
 		array_push($message["success"],"Configuration applied successfully");
@@ -115,6 +115,7 @@
 													<input name="AI_THRESHOLD" class="form-control" value="<?php print $config["AI_THRESHOLD"]?>">
 													<p class="help-block">The probability threshold for the ojbect to trigger the notification (e.g. 0.9).</p>
 												</div>
+												<label>False Positives</label>
 												<div class="checkbox">
 													<label>
 														<input type='hidden' value="0" name="AI_KEEP_NOT_FOUND">

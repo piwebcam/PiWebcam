@@ -4,7 +4,7 @@
 	if(count($_REQUEST) > 0) {
 		// system configuration form
 		if ($_REQUEST["action"] === "system") {
-			save_config(array('DEVICE_NAME','DEVICE_PASSWORD','DEVICE_TIMEZONE','DEVICE_COUNTRY_CODE','DEBUG'));
+			save_config(array('DEVICE_NAME','DEVICE_PASSWORD','DEVICE_TIMEZONE','DEVICE_COUNTRY_CODE','DEVICE_LED','DEBUG'));
 			run("configure_system");
 			load_config();
 			array_push($message["success"],"Configuration applied successfully");
@@ -120,6 +120,14 @@
 													</select>
 													<p class="help-block">The country will be used for connecting to the WiFi</p>
 												</div>
+												<label>LEDs</label>
+												<div class="checkbox">
+													<label>
+														<input type='hidden' value="0" name="DEVICE_LED">
+														<input value="1" name="DEVICE_LED" type="checkbox"<?php if ($config["DEVICE_LED"] === "1") print " checked"; ?>> Enable LEDs
+													</label>
+												</div>
+												<p class="help-block">If uncheched both the red and the green leds on the board will be turned off (default: checked).</p>
 												<label>Debug</label>
 												<div class="checkbox">
 													<label>

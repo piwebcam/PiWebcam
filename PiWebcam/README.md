@@ -414,6 +414,7 @@ DEVICE_NAME | name of the device
 DEVICE_PASSWORD | password of the device
 DEVICE_TIMEZONE | timezone of the device
 DEVICE_COUNTRY_CODE | country code of the device
+DEVICE_LED | If uncheched both the red and the green leds on the board will be turned off (default: checked)
 WIFI_MODE | Connect to an existing WiFi network ("CLIENT") or act as an access point ("AP")
 WIFI_AP_PASSPHRASE | The passphrase to use when connecting to this access point
 WIFI_CLIENT_SSID | The name of the wireless network (SSID) to connect to
