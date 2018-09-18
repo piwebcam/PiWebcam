@@ -310,8 +310,8 @@ function save_config {
 	if [[ -z "$CAMERA_FRAMERATE" ]]; then
 		CAMERA_FRAMERATE=5
 	fi
-	if [[ -z "$MOTION_MOVIE" ]]; then
-		MOTION_MOVIE=1
+	if [[ -z "$MOTION_RECORD_MOVIE" ]]; then
+		MOTION_RECORD_MOVIE=1
 	fi
 	if [[ -z "$MOTION_THRESHOLD" ]]; then
 		MOTION_THRESHOLD=1500
@@ -321,6 +321,9 @@ function save_config {
 	fi
 	if [[ -z "$MOTION_EVENT_GAP" ]]; then
 		MOTION_EVENT_GAP=60
+	fi
+	if [[ -z "$MOTION_PROCESS_MOVIE" ]]; then
+		MOTION_PROCESS_MOVIE=0
 	fi
 	if [[ -z "$AI_ENABLE" ]]; then
 		AI_ENABLE=0
@@ -379,13 +382,15 @@ CAMERA_ROTATE='$CAMERA_ROTATE'
 CAMERA_FRAMERATE='$CAMERA_FRAMERATE'
 
 # If set a movie (in addition to the picture) will be recorded upon motion
-MOTION_MOVIE='$MOTION_MOVIE'
+MOTION_RECORD_MOVIE='$MOTION_RECORD_MOVIE'
 # Number of changed pixels that triggers motion detection (default: 1500)
 MOTION_THRESHOLD='$MOTION_THRESHOLD'
 # The minimum number of frames in a row to be considered true motion (default: 1)
 MOTION_FRAMES='$MOTION_FRAMES'
 # Seconds of no motion that triggers the end of an event (default: 60)
 MOTION_EVENT_GAP='$MOTION_EVENT_GAP'
+# When a motion is detected, process (e.g. notify and analyze) the entire video instead of just the snapshot picture (default: unchecked)
+MOTION_PROCESS_MOVIE='$MOTION_PROCESS_MOVIE'
 
 # If checked, upon a motion the image will be further analyzed with an artifical intelligence model to detect a specific object
 AI_ENABLE='$AI_ENABLE'
@@ -865,13 +870,16 @@ function configure_system {
 	# LEDs
 	if [[ $DEVICE_LED == 0 ]]; then
 		log "Turning off the LEDs"
-		if [[ -x "/sys/class/leds/led0" ]]; then
-			echo none | tee /sys/class/leds/led0/trigger
-			echo 1 | tee /sys/class/leds/led0/brightness
-		fi
+		echo none | tee /sys/class/leds/led0/trigger
+		echo 1 | tee /sys/class/leds/led0/brightness
 		if [[ -x "/sys/class/leds/led1" ]]; then
 			echo none | tee /sys/class/leds/led1/trigger
 			echo 1 | tee /sys/class/leds/led1/brightness
+		fi
+	else
+		echo mmc0 | tee /sys/class/leds/led0/trigger
+		if [[ -x "/sys/class/leds/led1" ]]; then
+			echo input | tee /sys/class/leds/led1/trigger
 		fi
 	fi
 }
@@ -931,7 +939,6 @@ function configure_services {
 	sed -i -E 's/^snapshot_filename .+/snapshot_filename .snapshots\/%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
 	sed -i -E 's/^picture_filename .+/picture_filename year_%Y\/month_%m\/day_%d\/hour_%H\/%v-%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
 	sed -i -E 's/^movie_filename .+/movie_filename year_%Y\/month_%m\/day_%d\/hour_%H\/video\/%v-%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
-	sed -i -E "s/^; on_picture_save .+/on_picture_save sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
 	# allow motion user to run this script as root
 	echo "motion ALL=(ALL) NOPASSWD:$MY_FILE" > /etc/sudoers.d/${MY_NAME}_motion
 		
@@ -1067,10 +1074,10 @@ function configure_camera {
 		log "Setting camera framerate to $CAMERA_FRAMERATE"
 		sed -i -E "s/^framerate .+/framerate $CAMERA_FRAMERATE/" $CAMERA_CONFIG
 	fi
-	# set motion movie
-	if [[ -n "$MOTION_MOVIE" ]]; then
-		log "Setting motion movie to $MOTION_MOVIE"
-		if [[ $MOTION_MOVIE == 1 ]]; then
+	# set motion record movie
+	if [[ -n "$MOTION_RECORD_MOVIE" ]]; then
+		log "Setting motion record movie to $MOTION_RECORD_MOVIE"
+		if [[ $MOTION_RECORD_MOVIE == 1 ]]; then
 			sed -i -E "s/^ffmpeg_output_movies .+/ffmpeg_output_movies on/" $CAMERA_CONFIG
 		else
 			sed -i -E "s/^ffmpeg_output_movies .+/ffmpeg_output_movies off/" $CAMERA_CONFIG
@@ -1090,6 +1097,14 @@ function configure_camera {
 	if [[ -n "$MOTION_EVENT_GAP" ]]; then
 		log "Setting motion event gap to $MOTION_EVENT_GAP seconds"
 		sed -i -E "s/^event_gap .+/event_gap $MOTION_EVENT_GAP/" $CAMERA_CONFIG
+	fi
+	# set motion process movie
+	if [[ $MOTION_PROCESS_MOVIE == 1 ]]; then
+		log "Set to process motion event pictures"
+		sed -i -E "s/^; on_picture_save .+/on_picture_save sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
+	else
+		log "Set to process motion event movies"
+		sed -i -E "s/^; on_movie_end .+/on_movie_end sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
 	fi
 	# restart motion
 	log "Restarting camera"
@@ -1342,9 +1357,9 @@ function upgrade {
 			fi
 			if [[ -n "$DISABLE_MOVIE" ]]; then
 				if [[ $DISABLE_MOVIE = 0 ]]; then
-					MOTION_MOVIE=1
+					MOTION_RECORD_MOVIE=1
 				else
-					MOTION_MOVIE=0
+					MOTION_RECORD_MOVIE=0
 				fi
 			fi
 			if [[ -n "$RESOLUTION" ]]; then

@@ -426,10 +426,11 @@ NETWORK_REMOTE_ACCESS | If set the device will be recheable from the Internet
 CAMERA_RESOLUTION | The resolution for picture/video
 CAMERA_ROTATE | Rotate image this number of degrees
 CAMERA_FRAMERATE | Maximum number of frames to be captured per second
-MOTION_MOVIE | If set a movie (in addition to the picture) will be recorded upon motion
+MOTION_RECORD_MOVIE | If set a movie (in addition to the picture) will be recorded upon motion
 MOTION_THRESHOLD | Number of changed pixels that triggers motion detection
 MOTION_FRAMES | The minimum number of frames in a row to be considered true motion
 MOTION_EVENT_GAP | Seconds of no motion that triggers the end of an event
+MOTION_PROCESS_MOVIE | When a motion is detected, process (e.g. notify and analyze) the entire video instead of just the snapshot picture
 AI_ENABLE | If checked, upon a motion the image will be further analyzed with an AI model to detect a specific object
 AI_TOKEN | The API key for authenticating against the AI service
 AI_OBJECT | The object that must be present in the image to trigger the notification

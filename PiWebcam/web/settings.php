@@ -2,7 +2,7 @@
 	include "header.php";
 	// form submitted
 	if(count($_REQUEST) > 0) {
-		save_config(array('CAMERA_RESOLUTION','CAMERA_ROTATE','CAMERA_FRAMERATE','MOTION_MOVIE','MOTION_THRESHOLD','MOTION_FRAMES','MOTION_EVENT_GAP','AI_ENABLE','AI_TOKEN','AI_OBJECT','AI_THRESHOLD','AI_KEEP_NOT_FOUND'));
+		save_config(array('CAMERA_RESOLUTION','CAMERA_ROTATE','CAMERA_FRAMERATE','MOTION_RECORD_MOVIE','MOTION_THRESHOLD','MOTION_FRAMES','MOTION_EVENT_GAP','MOTION_PROCESS_MOVIE','AI_ENABLE','AI_TOKEN','AI_OBJECT','AI_THRESHOLD','AI_KEEP_NOT_FOUND'));
 		run("configure_camera");
 		load_config();
 		array_push($message["success"],"Configuration applied successfully");
@@ -18,7 +18,7 @@
                         <div class="panel-body">
 							<form id="form" method="POST" role="form">
 								<div class="row">
-									<div class="col-lg-6">
+									<div class="col-lg-12">
 										<div class="panel panel-default">
 											<div class="panel-body">
 												<h3>Camera</h3>
@@ -58,14 +58,16 @@
 											</div>
 										</div>
 									</div>
+								</div>
+								<div class="row">
 									<div class="col-lg-6">
 										<div class="panel panel-default">
 											<div class="panel-body">
 												<h3>Motion detection</h3>
 												<div class="checkbox">
 													<label>
-														<input type='hidden' value="0" name="MOTION_MOVIE">
-														<input value="1" name="MOTION_MOVIE" type="checkbox"<?php if ($config["MOTION_MOVIE"] === "1") print " checked"; ?>>Record movie
+														<input type='hidden' value="0" name="MOTION_RECORD_MOVIE">
+														<input value="1" name="MOTION_RECORD_MOVIE" type="checkbox"<?php if ($config["MOTION_RECORD_MOVIE"] === "1") print " checked"; ?>>Record movie
 													</label>
 												</div>
 												<p class="help-block">If checked a movie (in addition to a picture) will be recorded upon motion (<i>default: checked</i>)</p>
@@ -84,12 +86,18 @@
 													<input name="MOTION_EVENT_GAP" class="form-control" value="<?php print $config["MOTION_EVENT_GAP"]; ?>">
 													<p class="help-block">Seconds of no motion that triggers the end of an event (<i>default: 60</i>)</p>
 												</div>
+												<label>Motion processing</label>
+												<div class="checkbox">
+													<label>
+														<input type='hidden' value="0" name="MOTION_PROCESS_MOVIE">
+														<input value="1" name="MOTION_PROCESS_MOVIE" type="checkbox"<?php if ($config["MOTION_PROCESS_MOVIE"] === "1") print " checked"; ?>>Use video instead of picture
+													<p class="help-block">When a motion is detected, process (e.g. notify and analyze) the entire video instead of just the snapshot picture (default: unchecked).
+													</label>
+												</div>
 											</div>
 										</div>
 									</div>
-								</div>
-								<div class="row">
-									<div class="col-lg-12">
+									<div class="col-lg-6">
 										<div class="panel panel-default">
 											<div class="panel-body">
 												<h3>Image Analysis</h3>
@@ -115,7 +123,7 @@
 													<input name="AI_THRESHOLD" class="form-control" value="<?php print $config["AI_THRESHOLD"]?>">
 													<p class="help-block">The probability threshold for the ojbect to trigger the notification (e.g. 0.9).</p>
 												</div>
-												<label>False Positives</label>
+												<label>False positives</label>
 												<div class="checkbox">
 													<label>
 														<input type='hidden' value="0" name="AI_KEEP_NOT_FOUND">
@@ -123,7 +131,6 @@
 													<p class="help-block">If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives (default: unchecked).
 													</label>
 												</div>
-
 											</div>
 										</div>
 									</div>
