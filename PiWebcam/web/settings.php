@@ -91,7 +91,7 @@
 													<label>
 														<input type='hidden' value="0" name="MOTION_PROCESS_MOVIE">
 														<input value="1" name="MOTION_PROCESS_MOVIE" type="checkbox"<?php if ($config["MOTION_PROCESS_MOVIE"] === "1") print " checked"; ?>>Use video instead of picture
-													<p class="help-block">When a motion is detected, process (e.g. notify and analyze) the entire video instead of just the snapshot picture (default: unchecked).
+													<p class="help-block">When a motion is detected, process (e.g. notify and analyze) the entire video instead of just the snapshot picture (<i>default: unchecked</i>).
 													</label>
 												</div>
 											</div>
@@ -128,7 +128,7 @@
 													<label>
 														<input type='hidden' value="0" name="AI_KEEP_NOT_FOUND">
 														<input value="1" name="AI_KEEP_NOT_FOUND" type="checkbox"<?php if ($config["AI_KEEP_NOT_FOUND"] === "1") print " checked"; ?>>Keep false positives
-													<p class="help-block">If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives (default: unchecked).
+													<p class="help-block">If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives (<i>default: unchecked</i>).
 													</label>
 												</div>
 											</div>

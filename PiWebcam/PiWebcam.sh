@@ -69,6 +69,9 @@ ROOT_CLEANUP_THRESHOLD=90
 DATA_CLEANUP_THRESHOLD=80
 # location of the auth file for web access
 WEB_PASSWD_FILE="/etc/lighttpd/$MY_NAME.users"
+# escaped variables so can be used in the script
+ESCAPED_MY_FILE=`echo $MY_FILE|sed 's|/|\\\/|g'`
+ESCAPED_DATA_DIR=`echo $DATA_DIR|sed 's|/|\\\/|g'`
 
 ### location of system configuration files and directories
 NETWORK_CONFIG="/etc/dhcpcd.conf"
@@ -758,7 +761,6 @@ function installer {
 		
 		### Startup configuration - run this script with the configure parameter at boot time
 		log "Setting to start at boot time"
-		local ESCAPED_MY_FILE=`echo $MY_FILE|sed 's|/|\\\/|g'`
 		# add a placeholder just before printing the ip address
 		sed -i -n 'H;${x;s/^\n//;s/# Print the IP address/#PLACEHOLDER#\n\n&/;p;}' $STARTUP_FILE
 		# add this script where the placeholder was placed
@@ -921,8 +923,6 @@ function configure_services {
 	### motion configuration
 	log "Configuring motion"
 	# set reasonable default settings to motion
-	local ESCAPED_DATA_DIR=`echo $DATA_DIR|sed 's|/|\\\/|g'`
-	local ESCAPED_MY_FILE=`echo $MY_FILE|sed 's|/|\\\/|g'`
 	sed -i 's/start_motion_daemon=no/start_motion_daemon=yes/' $CAMERA_CONFIG_DEFAULT
 	sed -i -E 's/^daemon .+/daemon on/' $CAMERA_CONFIG
 	sed -i -E 's/^pre_capture .+/pre_capture 2/' $CAMERA_CONFIG
@@ -1100,11 +1100,11 @@ function configure_camera {
 	fi
 	# set motion process movie
 	if [[ $MOTION_PROCESS_MOVIE == 1 ]]; then
-		log "Set to process motion event pictures"
-		sed -i -E "s/^; on_picture_save .+/on_picture_save sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
-	else
 		log "Set to process motion event movies"
 		sed -i -E "s/^; on_movie_end .+/on_movie_end sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
+	else
+		log "Set to process motion event pictures"
+		sed -i -E "s/^; on_picture_save .+/on_picture_save sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
 	fi
 	# restart motion
 	log "Restarting camera"

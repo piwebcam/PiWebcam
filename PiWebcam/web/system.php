@@ -127,7 +127,7 @@
 														<input value="1" name="DEVICE_LED" type="checkbox"<?php if ($config["DEVICE_LED"] === "1") print " checked"; ?>> Enable LEDs
 													</label>
 												</div>
-												<p class="help-block">If uncheched both the red and the green leds on the board will be turned off (default: checked).</p>
+												<p class="help-block">If uncheched both the red and the green leds on the board will be turned off (<i>default: checked</i>).</p>
 												<label>Debug</label>
 												<div class="checkbox">
 													<label>
@@ -135,7 +135,7 @@
 														<input value="1" name="DEBUG" type="checkbox"<?php if ($config["DEBUG"] === "1") print " checked"; ?>> Enable debug
 													</label>
 												</div>
-												<p class="help-block">Increase the verbosity and print out debug messages for troubleshooting.</p>
+												<p class="help-block">Increase the verbosity and print out debug messages for troubleshooting (<i>default: unchecked</i>).</p>
 												<button id="button" type="submit" onclick='$("#button").addClass("disabled"); $("#confirm_modal").modal("show");return false;' class="pull-right btn btn-primary">Apply settings</button>
 											</form>
 										</div>
