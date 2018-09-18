@@ -378,11 +378,12 @@ Additionally, any setting exposed through the web interface, can also be set pro
     * WiFi Signal level
     * Motion/Access point services status
 
-** Notify about a motion (run by motion for "on_picture_save" events)  **
+** Notify about a motion (run by motion for "on_save" events)  **
 
-`sudo /boot/PiWebcam/PiWebcam.sh notify <snapshot_file>`
+`sudo /boot/PiWebcam/PiWebcam.sh motion <filename>`
 
 * If an Internet connection is available:
+	* perform image analysis and object detection (if configured)
     * send email notification (if configured)
     * send slack notification (if configured)
 * If there disconnected from Internet:

@@ -61,7 +61,7 @@ NOTIFICATION_SUBJECT="Motion Detected"
 # where to store the notification queue if internet is not available
 NOTIFICATION_QUEUE="$PERSIST_DIR/notification_queue"
 # how many notifications to keep in the queue
-NOTIFICATION_QUEUE_SIZE=10
+NOTIFICATION_QUEUE_SIZE=20
 # the command to execute to check if we have an internet connection
 INTERNET="ping -W 2 -c 1 8.8.8.8|grep time=|wc -l"
 # cleanup the filesystem if above the threshold in percentage
@@ -917,7 +917,7 @@ function configure_services {
 	sed -i -E 's/^snapshot_filename .+/snapshot_filename .snapshots\/%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
 	sed -i -E 's/^picture_filename .+/picture_filename year_%Y\/month_%m\/day_%d\/hour_%H\/%v-%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
 	sed -i -E 's/^movie_filename .+/movie_filename year_%Y\/month_%m\/day_%d\/hour_%H\/video\/%v-%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
-	sed -i -E "s/^; on_picture_save .+/on_picture_save sudo $ESCAPED_MY_FILE notify %f/" $CAMERA_CONFIG
+	sed -i -E "s/^; on_picture_save .+/on_picture_save sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
 	# allow motion user to run this script as root
 	echo "motion ALL=(ALL) NOPASSWD:$MY_FILE" > /etc/sudoers.d/${MY_NAME}_motion
 		
@@ -1413,85 +1413,86 @@ if [ "$1" = "status" ]; then
 fi
 
 #################
-# Notify
+# Motion
 #################
 
 # notify about a motion ($2: filename)
-if [ "$1" = "notify" ]; then
-	PICTURE=$2
+if [ "$1" = "motion" ]; then
+	FILENAME=$2
 	NOTIFY=1
-	# do not notify when generating a snapshots
-	if [[ -n "$PICTURE" && $PICTURE != *"/.snapshots/"*  ]]; then
+	# ensure a valid file is received
+	if [[ -n "$FILENAME" && $FILENAME != *"/.snapshots/"*  ]]; then
 		# check for an internet connection
-		INTERNET_OK=$(eval $INTERNET)
-		# perform image analysis if enabled
-		if [[ $INTERNET_OK == 1 && $AI_ENABLE == 1 && -n "$AI_TOKEN" && -n "$AI_OBJECT" && -n "$AI_THRESHOLD" ]]; then
-			# analyze the image
-			AI_OUTPUT=$(curl -s -X POST \
-			-H "Authorization: Key $AI_TOKEN" \
-			-H "Content-Type: application/json" \
-			-o - \
-			-d @- https://api.clarifai.com/v2/models/aaa03c23b3724a16a56b629203edc62c/outputs << FILEIN
-				{
-					"inputs": [
-			      		{
-							"data": {
-								"image": {
-									"base64": "$(base64 $PICTURE)"
+		if [[ $(eval $INTERNET) = "1" ]]; then
+			# perform image analysis if enabled
+			if [[ $AI_ENABLE == 1 && -n "$AI_TOKEN" && -n "$AI_OBJECT" && -n "$AI_THRESHOLD" ]]; then
+				# analyze the image
+				AI_OUTPUT=$(curl -s -X POST \
+				-H "Authorization: Key $AI_TOKEN" \
+				-H "Content-Type: application/json" \
+				-o - \
+				-d @- https://api.clarifai.com/v2/models/aaa03c23b3724a16a56b629203edc62c/outputs << FILEIN
+					{
+						"inputs": [
+							{
+								"data": {
+									"image": {
+										"base64": "$(base64 $FILENAME)"
+									}
 								}
 							}
-						}
-					]
-				}
+						]
+					}
 FILEIN
 )
-			log "Image analysis output: $AI_OUTPUT"
-			# get the status code
-			STATUS_CODE=`echo $AI_OUTPUT| jq '.status.code'`
-			if [[ $STATUS_CODE == 10000 ]]; then
-				# check if the object has been found in the image
-				OBJECT_FOUND=`echo $AI_OUTPUT| jq -r ".outputs[0].data.concepts[] | .name == \"$AI_OBJECT\" and .value > $AI_THRESHOLD" |grep true|wc -l`
-				if [[ $OBJECT_FOUND == 1 ]]; then
-					log "Motion confirmed, $AI_OBJECT was FOUND in $PICTURE"
-				else
-					log "Ignoring motion, $AI_OBJECT was not found in $PICTURE"
-					# do not notify
-					NOTIFY=0
-					if [[ $AI_KEEP_NOT_FOUND != "1" ]]; then
-						# remove both the picture and the video of the recorded motion
-						DIR_NAME=`dirname $PICTURE`
-						EVENT_NUMBER=`basename $PICTURE | cut -d'-' -f1`
-						rm -f $DIR_NAME/${EVENT_NUMBER}-*
-						rm -f $DIR_NAME/video/${EVENT_NUMBER}-*
+				log "Image analysis output: $AI_OUTPUT"
+				# get the status code
+				STATUS_CODE=`echo $AI_OUTPUT| jq '.status.code'`
+				if [[ $STATUS_CODE == 10000 ]]; then
+					# check if the object has been found in the image
+					OBJECT_FOUND=`echo $AI_OUTPUT| jq -r ".outputs[0].data.concepts[] | .name == \"$AI_OBJECT\" and .value > $AI_THRESHOLD" |grep true|wc -l`
+					if [[ $OBJECT_FOUND == 1 ]]; then
+						log "Motion confirmed, $AI_OBJECT was FOUND in $FILENAME"
+					else
+						log "Ignoring motion, $AI_OBJECT was not found in $FILENAME"
+						# do not notify
+						NOTIFY=0
+						if [[ $AI_KEEP_NOT_FOUND != "1" ]]; then
+							# remove both the picture and the video of the recorded motion
+							DIR_NAME=`dirname $FILENAME`
+							EVENT_NUMBER=`basename $FILENAME | cut -d'-' -f1`
+							rm -f $DIR_NAME/${EVENT_NUMBER}-*
+							rm -f $DIR_NAME/video/${EVENT_NUMBER}-*
+						fi
 					fi
+				else
+					log "Image analysis service exited with error code: $STATUS_CODE"
 				fi
-			else
-				log "Image analysis service exited with error code: $STATUS_CODE"
 			fi
-		fi
-		# ensure at least one notification is enabled
-		if [[ "$EMAIL_ENABLE" = "1" || "$SLACK_ENABLE" = "1" ]]; then
-			log "Notifying about $PICTURE"
-			# check if we have an internet connection
-			if [[ $INTERNET_OK == "1" ]]; then
+			# notify the user
+			if [[ "$EMAIL_ENABLE" = "1" || "$SLACK_ENABLE" = "1" ]]; then
+				log "Notifying about $FILENAME"
 				if [ "$EMAIL_ENABLE" = "1" && "$NOTIFY" = 1 ]; then
 					# send email notification
 					log "Sending email to $EMAIL_TO"
-					mpack -s "[$DEVICE_NAME] $NOTIFICATION_SUBJECT" "$PICTURE" "$EMAIL_TO"
+					mpack -s "[$DEVICE_NAME] $NOTIFICATION_SUBJECT" "$FILENAME" "$EMAIL_TO"
 				fi
 				if [ "$SLACK_ENABLE" = "1" && "$NOTIFY" = 1 ]; then
 					# send slack notification
 					log "Sending slack notification to channel $SLACK_CHANNEL"
-					curl -F file=@$PICTURE -F channels=$SLACK_CHANNEL -F token=$SLACK_TOKEN initial_comment="[$DEVICE_NAME] $NOTIFICATION_SUBJECT" https://slack.com/api/files.upload
+					curl -F file=@$FILENAME -F channels=$SLACK_CHANNEL -F token=$SLACK_TOKEN initial_comment="[$DEVICE_NAME] $NOTIFICATION_SUBJECT" https://slack.com/api/files.upload
 				fi
-			else
-				# queue the notification
-				echo $PICTURE >> $NOTIFICATION_QUEUE
+			fi
+		else
+			# no internet connection; if notifications are on or AI is enabled, queue the file
+			if [[ "$EMAIL_ENABLE" = "1" || "$SLACK_ENABLE" = "1" || "$AI_ENABLE" = "1" ]]; then
+				# queue the file
+				echo $FILENAME >> $NOTIFICATION_QUEUE
 				# if the notification queue is full, remove the oldest entry
 				if [[ -f "$NOTIFICATION_QUEUE" && $(cat $NOTIFICATION_QUEUE|wc -l) -gt $NOTIFICATION_QUEUE_SIZE ]]; then
 					sed -i -e "1d" $NOTIFICATION_QUEUE
 				fi
-				log "Disconnected from the network, queuing the notification"
+				log "Disconnected from the network, queuing $FILENAME"
 			fi
 		fi
 	fi
@@ -1526,7 +1527,7 @@ if [ "$1" = "checkup" ]; then
 	### process the notification queue if not empty and we have an Internet connection
 	if [[ -f "$NOTIFICATION_QUEUE" && $(eval $INTERNET) = "1" ]]; then
 		# for each item run the notify command
-		while read in; do log "Processing $in from the notification queue"; $MY_FILE notify $in;  done < $NOTIFICATION_QUEUE
+		while read in; do log "Processing $in from the notification queue"; $MY_FILE motion $in;  done < $NOTIFICATION_QUEUE
 		# empty the queue
 		rm -f $NOTIFICATION_QUEUE
 	fi
