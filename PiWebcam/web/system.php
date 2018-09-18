@@ -161,7 +161,7 @@
 									</div>
 									<div class="panel panel-default">
 										<div class="panel-body">
-										<h3>System Update</h3>
+										<h3>System Upgrade</h3>
 											<form id="upgrade_form" method="POST" role="form" enctype="multipart/form-data">
 											<input type="hidden" name="action" value="upgrade">
 												<label>Upgrade Device</label>

@@ -722,16 +722,22 @@ function installer {
 		### install dependencies
 		log "Installing dependencies"
 		apt-get update
-		apt-get -y install busybox dnsmasq hostapd f2fs-tools lighttpd motion php-fpm php-cgi php-gd zip sharutils ssmtp mpack autossh
-		apt-get clean
-		# disable apt cache
-		echo -e 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";' | sudo tee /etc/apt/apt.conf.d/00_disable-cache-files
+		apt-get -y install busybox dnsmasq hostapd f2fs-tools lighttpd motion php-fpm php-cgi php-gd zip sharutils ssmtp jq mpack autossh
 		# stop and disable all the services
 		log "Disabling services"
 		stop_services
 		systemctl disable hostapd
 		systemctl disable dnsmasq
 		systemctl disable motion
+		log "Configuring apt"
+		apt-get clean
+		# disable apt cache
+		echo -e 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";' | sudo tee /etc/apt/apt.conf.d/00_disable-cache-files
+		# disabling apt dailyservices
+		systemctl disable apt-daily.service
+		systemctl disable apt-daily.timer
+		systemctl disable apt-daily-upgrade.timer
+		systemctl disable apt-daily-upgrade.service
 		
 		### create and install initramfs image
 		install_initramfs_modules
@@ -1275,6 +1281,10 @@ function upgrade {
 			if ! which jq >/dev/null; then
 				chroot_lower "apt-get update; apt-get -y install jq"
 			fi
+			# configure services
+			if systemctl status apt-daily.service|grep -q ExecStart; then
+				chroot_lower "systemctl disable apt-daily.service; systemctl disable apt-daily.timer; systemctl disable apt-daily-upgrade.timer; systemctl disable apt-daily-upgrade.service"
+			fi 
 			enable_write_boot
 			# backup current version
 			local BACKUP_DIR="$MY_DIR/backup/v$1"
