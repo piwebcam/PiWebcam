@@ -428,10 +428,11 @@ MOTION_MOVIE | If set a movie (in addition to the picture) will be recorded upon
 MOTION_THRESHOLD | Number of changed pixels that triggers motion detection
 MOTION_FRAMES | The minimum number of frames in a row to be considered true motion
 MOTION_EVENT_GAP | Seconds of no motion that triggers the end of an event
-IMAGE_ANALYSIS_ENABLE | If checked, upon a motion the image will be further analyzed with an AI model to detect a specific object
-IMAGE_ANALYSIS_TOKEN | The API key for authenticating against the AI service
-IMAGE_ANALYSIS_OBJECT | The object that must be present in the image to trigger the notification
-IMAGE_ANALYSIS_THRESHOLD | The probability threshold for the ojbect to trigger the notification
+AI_ENABLE | If checked, upon a motion the image will be further analyzed with an AI model to detect a specific object
+AI_TOKEN | The API key for authenticating against the AI service
+AI_OBJECT | The object that must be present in the image to trigger the notification
+AI_THRESHOLD | The probability threshold for the ojbect to trigger the notification
+AI_KEEP_NOT_FOUND | If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives
 EMAIL_ENABLE | Enable email notifications
 EMAIL_TO | Set email recipients
 EMAIL_SERVER | The mail server to use

@@ -322,8 +322,11 @@ function save_config {
 	if [[ -z "$MOTION_EVENT_GAP" ]]; then
 		MOTION_EVENT_GAP=60
 	fi
-	if [[ -z "$IMAGE_ANALYSIS_ENABLE" ]]; then
-		IMAGE_ANALYSIS_ENABLE=0
+	if [[ -z "$AI_ENABLE" ]]; then
+		AI_ENABLE=0
+	fi
+	if [[ -z "$AI_KEEP_NOT_FOUND" ]]; then
+		AI_KEEP_NOT_FOUND=0
 	fi
 	# set default settings for the notifications
 	if [[ -z "$EMAIL_ENABLE" ]]; then
@@ -384,13 +387,15 @@ MOTION_FRAMES='$MOTION_FRAMES'
 MOTION_EVENT_GAP='$MOTION_EVENT_GAP'
 
 # If checked, upon a motion the image will be further analyzed with an artifical intelligence model to detect a specific object
-IMAGE_ANALYSIS_ENABLE='$IMAGE_ANALYSIS_ENABLE'
+AI_ENABLE='$AI_ENABLE'
 # The API key for authenticating against the AI service
-IMAGE_ANALYSIS_TOKEN='$IMAGE_ANALYSIS_TOKEN'
+AI_TOKEN='$AI_TOKEN'
 # The object that must be present in the image to trigger the notification (e.g. people)
-IMAGE_ANALYSIS_OBJECT='$IMAGE_ANALYSIS_OBJECT'
+AI_OBJECT='$AI_OBJECT'
 # The probability threshold for the ojbect to trigger the notification (e.g. 0.9)
-IMAGE_ANALYSIS_THRESHOLD='$IMAGE_ANALYSIS_THRESHOLD'
+AI_THRESHOLD='$AI_THRESHOLD'
+# If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives (default: unchecked)
+AI_KEEP_NOT_FOUND='$AI_KEEP_NOT_FOUND'
 
 # When a motion is detected, the snapshot is attached to an e-mail message and sent to the configured recipients
 EMAIL_ENABLE='$EMAIL_ENABLE'
@@ -1420,10 +1425,10 @@ if [ "$1" = "notify" ]; then
 		# check for an internet connection
 		INTERNET_OK=$(eval $INTERNET)
 		# perform image analysis if enabled
-		if [[ $INTERNET_OK == 1 && $IMAGE_ANALYSIS_ENABLE == 1 && -n "$IMAGE_ANALYSIS_TOKEN" && -n "$IMAGE_ANALYSIS_OBJECT" && -n "$IMAGE_ANALYSIS_THRESHOLD" ]]; then
+		if [[ $INTERNET_OK == 1 && $AI_ENABLE == 1 && -n "$AI_TOKEN" && -n "$AI_OBJECT" && -n "$AI_THRESHOLD" ]]; then
 			# analyze the image
-			IMAGE_ANALYSIS_OUTPUT=$(curl -s -X POST \
-			-H "Authorization: Key $IMAGE_ANALYSIS_TOKEN" \
+			AI_OUTPUT=$(curl -s -X POST \
+			-H "Authorization: Key $AI_TOKEN" \
 			-H "Content-Type: application/json" \
 			-o - \
 			-d @- https://api.clarifai.com/v2/models/aaa03c23b3724a16a56b629203edc62c/outputs << FILEIN
@@ -1440,23 +1445,25 @@ if [ "$1" = "notify" ]; then
 				}
 FILEIN
 )
-			log "Image analysis output: $IMAGE_ANALYSIS_OUTPUT"
+			log "Image analysis output: $AI_OUTPUT"
 			# get the status code
-			STATUS_CODE=`echo $IMAGE_ANALYSIS_OUTPUT| jq '.status.code'`
+			STATUS_CODE=`echo $AI_OUTPUT| jq '.status.code'`
 			if [[ $STATUS_CODE == 10000 ]]; then
 				# check if the object has been found in the image
-				OBJECT_FOUND=`echo $IMAGE_ANALYSIS_OUTPUT| jq -r ".outputs[0].data.concepts[] | .name == \"$IMAGE_ANALYSIS_OBJECT\" and .value > $IMAGE_ANALYSIS_THRESHOLD" |grep true|wc -l`
+				OBJECT_FOUND=`echo $AI_OUTPUT| jq -r ".outputs[0].data.concepts[] | .name == \"$AI_OBJECT\" and .value > $AI_THRESHOLD" |grep true|wc -l`
 				if [[ $OBJECT_FOUND == 1 ]]; then
-					log "Motion confirmed, $IMAGE_ANALYSIS_OBJECT was FOUND in $PICTURE"
+					log "Motion confirmed, $AI_OBJECT was FOUND in $PICTURE"
 				else
-					log "Ignoring motion, $IMAGE_ANALYSIS_OBJECT was not found in $PICTURE"
+					log "Ignoring motion, $AI_OBJECT was not found in $PICTURE"
 					# do not notify
 					NOTIFY=0
-					# remove both the picture and the video of the recorded motion
-					rm -f $PICTURE
-					DIR_NAME=`dirname $PICTURE`
-					EVENT_NUMBER=`basename $PICTURE | cut -d'-' -f1`
-					rm -f $DIR_NAME/video/${EVENT_NUMBER}-*
+					if [[ $AI_KEEP_NOT_FOUND != "1" ]]; then
+						# remove both the picture and the video of the recorded motion
+						DIR_NAME=`dirname $PICTURE`
+						EVENT_NUMBER=`basename $PICTURE | cut -d'-' -f1`
+						rm -f $DIR_NAME/${EVENT_NUMBER}-*
+						rm -f $DIR_NAME/video/${EVENT_NUMBER}-*
+					fi
 				fi
 			else
 				log "Image analysis service exited with error code: $STATUS_CODE"

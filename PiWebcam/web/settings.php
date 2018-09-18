@@ -2,7 +2,7 @@
 	include "header.php";
 	// form submitted
 	if(count($_REQUEST) > 0) {
-		save_config(array('CAMERA_RESOLUTION','CAMERA_ROTATE','CAMERA_FRAMERATE','MOTION_MOVIE','MOTION_THRESHOLD','MOTION_FRAMES','MOTION_EVENT_GAP','IMAGE_ANALYSIS_ENABLE','IMAGE_ANALYSIS_TOKEN','IMAGE_ANALYSIS_OBJECT','IMAGE_ANALYSIS_THRESHOLD'));
+		save_config(array('CAMERA_RESOLUTION','CAMERA_ROTATE','CAMERA_FRAMERATE','MOTION_MOVIE','MOTION_THRESHOLD','MOTION_FRAMES','MOTION_EVENT_GAP','AI_ENABLE','AI_TOKEN','AI_OBJECT','AI_THRESHOLD'));
 		run("configure_camera");
 		load_config();
 		array_push($message["success"],"Configuration applied successfully");
@@ -95,26 +95,34 @@
 												<h3>Image Analysis</h3>
 												<div class="checkbox">
 													<label>
-														<input type='hidden' value="0" name="IMAGE_ANALYSIS_ENABLE">
-														<input value="1" name="IMAGE_ANALYSIS_ENABLE" type="checkbox"<?php if ($config["IMAGE_ANALYSIS_ENABLE"] === "1") print " checked"; ?>>Enable object detection
+														<input type='hidden' value="0" name="AI_ENABLE">
+														<input value="1" name="AI_ENABLE" type="checkbox"<?php if ($config["AI_ENABLE"] === "1") print " checked"; ?>>Enable object detection
 													<p class="help-block">If checked, upon a motion the image will be further analyzed with an artifical intelligence model to detect a specific object.
 													</label>
 												</div>
 												<div class="form-group">
 													<label>Token</label>
-													<input name="IMAGE_ANALYSIS_TOKEN" class="form-control" value="<?php print $config["IMAGE_ANALYSIS_TOKEN"]?>">
+													<input name="AI_TOKEN" class="form-control" value="<?php print $config["AI_TOKEN"]?>">
 													<p class="help-block">The token for authenticating against the cloud service. Click <a target="_blank" href="https://clarifai.com/developer/account/keys/create">HERE</a> for generating a the token.</p>
 												</div>
 												<div class="form-group">
 													<label>Object</label>
-													<input name="IMAGE_ANALYSIS_OBJECT" class="form-control" value="<?php print $config["IMAGE_ANALYSIS_OBJECT"]?>">
+													<input name="AI_OBJECT" class="form-control" value="<?php print $config["AI_OBJECT"]?>">
 													<p class="help-block">The object that must be present in the image to trigger the motion/notification (e.g. people). Click <a target="_blank" href="https://clarifai.com/demo">HERE</a> for testing your image and check which objects are identified.</p>
 												</div>
 												<div class="form-group">
 													<label>Threshold</label>
-													<input name="IMAGE_ANALYSIS_THRESHOLD" class="form-control" value="<?php print $config["IMAGE_ANALYSIS_THRESHOLD"]?>">
+													<input name="AI_THRESHOLD" class="form-control" value="<?php print $config["AI_THRESHOLD"]?>">
 													<p class="help-block">The probability threshold for the ojbect to trigger the notification (e.g. 0.9).</p>
 												</div>
+												<div class="checkbox">
+													<label>
+														<input type='hidden' value="0" name="AI_KEEP_NOT_FOUND">
+														<input value="1" name="AI_KEEP_NOT_FOUND" type="checkbox"<?php if ($config["AI_KEEP_NOT_FOUND"] === "1") print " checked"; ?>>Keep false positives
+													<p class="help-block">If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives (default: unchecked).
+													</label>
+												</div>
+
 											</div>
 										</div>
 									</div>
