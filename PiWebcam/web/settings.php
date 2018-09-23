@@ -1,8 +1,8 @@
 <?php 
 	include "header.php";
 	// form submitted
-	if(count($_REQUEST) > 0) {
-		save_config(array('CAMERA_RESOLUTION','CAMERA_ROTATE','CAMERA_FRAMERATE','MOTION_RECORD_MOVIE','MOTION_THRESHOLD','MOTION_FRAMES','MOTION_EVENT_GAP','MOTION_PROCESS_MOVIE','AI_ENABLE','AI_TOKEN','AI_OBJECT','AI_THRESHOLD','AI_KEEP_NOT_FOUND'));
+	if(count($_REQUEST) > 0 && $_REQUEST["action"] === "configure_camera") {
+		save_config(array('CAMERA_RESOLUTION','CAMERA_ROTATE','CAMERA_FRAMERATE','CAMERA_NIGHT_MODE','MOTION_RECORD_MOVIE','MOTION_THRESHOLD','MOTION_FRAMES','MOTION_EVENT_GAP','MOTION_PROCESS_MOVIE','AI_ENABLE','AI_TOKEN','AI_OBJECT','AI_THRESHOLD','AI_KEEP_NOT_FOUND'));
 		run("configure_camera");
 		load_config();
 		array_push($message["success"],"Configuration applied successfully");
@@ -17,6 +17,7 @@
                         </div>
                         <div class="panel-body">
 							<form id="form" method="POST" role="form">
+							<input type="hidden" name="action" value="configure_camera">
 								<div class="row">
 									<div class="col-lg-12">
 										<div class="panel panel-default">
@@ -26,7 +27,7 @@
 													<label>Resolution</label>
 													<select name="CAMERA_RESOLUTION" class="form-control">
 														<?php 
-															$resolutions = array('','640x480','1024x768','1296x976','1640x1232');
+															$resolutions = array('','352x288','640x480','1024x768','1296x976','1640x1232');
 															foreach ($resolutions as $index => $resolution) {
 																print "<option value=\"".$resolution."\"";
 																if ($config["CAMERA_RESOLUTION"] === $resolution) print " selected"; 
@@ -54,6 +55,15 @@
 													<label>Framerate</label>
 													<input name="CAMERA_FRAMERATE" class="form-control" value="<?php print $config["CAMERA_FRAMERATE"]; ?>">
 													<p class="help-block">Maximum number of frames to be captured per second (<i>default: 5</i>)</p>
+												</div>
+												<div class="form-group">
+													<label>Night Mode</label>
+													<select name="CAMERA_NIGHT_MODE" class="form-control">
+														<option value="ON" <?php if ($config["CAMERA_NIGHT_MODE"] === "ON") print " selected"?>>On</option>
+														<option value="AUTO" <?php if ($config["CAMERA_NIGHT_MODE"] === "AUTO") print " selected"?>>Auto</option>
+														<option value="OFF" <?php if ($config["CAMERA_NIGHT_MODE"] === "OFF") print " selected"?>>Off</option>
+													</select>
+													<p class="help-block">Enter night mode manually or automatically (when the value of a pin changes).</p>
 												</div>
 											</div>
 										</div>

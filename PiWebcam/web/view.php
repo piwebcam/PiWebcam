@@ -1,6 +1,11 @@
 <?php 
 	include "header.php";
 	include "messages.php";
+	// form submitted
+	if(count($_REQUEST) > 0 && $_REQUEST["action"] === "night_mode") {
+		run("night_mode ".$_REQUEST["night_mode"]);
+	}
+	$night_status = run("night_mode");
 ?>
             <div class="row">
                 <div class="col-lg-12">
@@ -20,6 +25,19 @@
 							<div class="row">
 								<div class="col-lg-2 col-lg-offset-5">
 								<br>
+								<center>
+									<form method="POST" role="form">
+									<input type="hidden" name="action" value="night_mode">
+										<div class="btn-group" role="group">
+											<button name="night_mode" value="0" type="submit" class="btn btn-sm btn-<?php echo $night_status == 0 ?  "primary" : "default" ?>"><i class="fa fa-sun-o"></i></button>
+											<button name="night_mode" value="1" type="submit" class="btn btn-sm btn-<?php echo $night_status == 1 ?  "primary" : "default" ?>"><i class="fa fa-moon-o"></i></button>
+										</div>
+									</form>
+								</center>
+								</div>
+								<div class="col-lg-2 col-lg-offset-5">
+								<br>
+									<center>
 									<p class="help-block">Refresh (seconds)</p>
 									<div class="input-group">
 										<span class="input-group-btn">
@@ -43,6 +61,7 @@
 											</button>
 										</span>
 									</div>
+									</center>
 								</div>
 							</div>
 							<div class="row">

@@ -19,7 +19,7 @@ function run($command) {
 	global $message;
 	global $config;
 	if (array_key_exists("DEBUG",$config) && $config["DEBUG"]) array_push($message["info"],"$ ".$command);
-	$ret = shell_exec("sudo REMOTE_ADDR=".$_SERVER["REMOTE_ADDR"]." /boot/PiWebcam/PiWebcam.sh ".$command." 2>&1");
+	$ret = shell_exec("sudo REMOTE_ADDR=".$_SERVER["REMOTE_ADDR"]." /boot/PiWebcam/PiWebcam.sh ".$command." 2>&1 ");
 	if (array_key_exists("DEBUG",$config) && $config["DEBUG"]) array_push($message["info"],$ret);
 	return $ret;
 }
@@ -175,10 +175,10 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
                                     <a href="network.php"><i class="fa fa-signal fa-fw"></i> Network</a>
                                 </li>
                                 <li>
-                                    <a href="system.php"><i class="fa fa-gears fa-fw"></i> System</a>
+                                    <a href="logs.php"><i class="fa fa-th-list fa-fw"></i> Logs</a>
                                 </li>
                                 <li>
-                                    <a href="logs.php"><i class="fa fa-th-list fa-fw"></i> Logs</a>
+                                    <a href="system.php"><i class="fa fa-gears fa-fw"></i> System</a>
                                 </li>
                             </ul>
                         </li>

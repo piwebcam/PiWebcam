@@ -1,7 +1,7 @@
 <?php 
 	include "header.php";
 	// form submitted
-	if(count($_REQUEST) > 0) {
+	if(count($_REQUEST) > 0 && $_REQUEST["action"] === "configure_notifications") {
 		save_config(array('EMAIL_ENABLE','EMAIL_TO','EMAIL_SERVER','EMAIL_TLS','EMAIL_USERNAME','EMAIL_PASSWORD','SLACK_ENABLE','SLACK_TOKEN','SLACK_CHANNEL'));
 		run("configure_notifications");
 		load_config();
@@ -17,6 +17,7 @@
                         </div>
                         <div class="panel-body">
 							<form id="form" method="POST" role="form">
+							<input type="hidden" name="action" value="configure_notifications">
 								<div class="row">
 									<div class="col-lg-6">
 										<div class="panel panel-default">

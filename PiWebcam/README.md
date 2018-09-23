@@ -8,18 +8,19 @@ I then started exploring **alternative options** such as building it by myself a
 
 There are **already around a good number of projects** for using a Raspberry Pi as a webcam but generally speaking they **requires advanced knowledge** and skills and they look like **more ad-hoc solutions rather than finite products**.
 
-**PiWebcam** is intended to provide a powerful imaging platform **for everyone, regardless of his/her previous knowledge**. An installation script will take care of fully configuring the system with resonable default settings, letting the user customizing through a **clean and mobile-friendly web interface** only a very limited number of relevant parameters. Nevertheless, thanks to its **powerful motion detection feature** enhanced by an **object recognition capabilities** powered by an **artificial intelligence model**, PiWebcam can **notify the user** of any detected motion by sending a snapshot to an e-mail recipient or on posting it the user's favorite Slack channel.
+**PiWebcam** is intended to provide a powerful imaging platform **for everyone, regardless of his/her previous knowledge**. An installation script will take care of fully configuring the system with resonable default settings, letting the user customizing through a **clean and mobile-friendly web interface** only a very limited number of relevant parameters. Nevertheless, thanks to its **powerful motion detection feature** augmented by an **object recognition capabilities** powered by an **artificial intelligence model**, PiWebcam can **notify the user** of any detected motion by sending a snapshot to an e-mail recipient or on posting it the user's favorite Slack channel.
 
 Main features include:
 
 * Can be installed and configured by running a single command
 * Simple, mobile-friendly web interface
 * Snapshot and video recording upon motion detection
-* Object recognition capabilities to lower down false positives
+* AI-based object recognition capabilities to prevent false positives
 * E-mail and Slack notifications
 * Can act as an Access Point or connect to an existing WiFi network
 * Can be accessed from the Internet without any additional configuration
 * Survive to any power outages
+* Can switch automatically to night mode and control IR Leds and IR Cut filter 
 * Old files are automatically purged when the SD card is almost full
 * Ability to import/export the entire configuration of the device
 
@@ -27,10 +28,12 @@ Main features include:
 
 * Raspberry Pi Model 3 or Raspberry Pi Zero W
 * Raspbian Stretch Lite
-* Raspberry Pi Camera
+* Raspberry Pi Camera (any model) or a Generic USB Camera
 * SD Card (16GB recommended)
 
 # Installation
+
+Installing PiWecam would require a fresh installation of Raspbian and a SD card. Please do not re-use an existing installation but start from scratch as listed below:
 
 * Download Raspbian Stretch Lite operating system (<https://www.raspberrypi.org/downloads/raspbian/>)
 * Write the image to a SD card (<https://www.raspberrypi.org/documentation/installation/installing-images/>)
@@ -104,6 +107,7 @@ The following  settings can be customized through the admin web panel.
 * **Password**: The same password will be then used for both SSH and web
 * **Timezone**: The timezone will be used for displaying the right time
 * **Country Code**: The country will be used for connecting to the WiFi
+* **LEDs**: Turn on/off both the red and the green leds on the board 
 * **Debug**: Increase the verbosity and print out debug messages for troubleshooting.
 
 ## Network Settings
@@ -119,6 +123,7 @@ Camera:
 * **Resolution**: Select the resolution for picture/video (default: 640x480)
 * **Rotate**: Rotate image this number of degrees (default: 0)
 * **Framerate**: Maximum number of frames to be captured per second (default: 5)
+* **Night Mode**: Enter night mode manually or automatically (when the value of a pin changes)
 
 Motion Detection: 
 
@@ -126,13 +131,15 @@ Motion Detection:
 * **Threshold**: Number of changed pixels that triggers motion detection (default: 1500)
 * **Minimum motion frames**: The minimum number of frames in a row to be considered true motion (default: 1)
 * **Event gap**: Seconds of no motion that triggers the end of an event (default: 60)
+* **Motion processing**: When a motion is detected, process (e.g. notify and analyze) the entire video instead of just the snapshot picture (default: unchecked)
 
 Image Analysis:
 
 * **Enable object detection**: If checked, upon a motion the image will be further analyzed with an artifical intelligence model to detect a specific object.
 * **Token**: The token for authenticating against the cloud service. Click on https://clarifai.com/developer/account/keys/create for generating a new token.
 * **Object**: The object that must be present in the image to trigger the motion/notification (e.g. people). Click on https://clarifai.com/demo for testing your image and check with objects are identified
-* **Threshold**: The probability threshold for the ojbect to trigger the notification (e.g. 0.9).
+* **Threshold**: The probability threshold for the ojbect to trigger the notification (e.g. 0.9)	
+* **False positives**: If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives (default: unchecked)
 
 ## Notification Settings
 
@@ -165,21 +172,23 @@ For the initial configuration, there is **no need to install any mobile app or d
 
 PiWebcam comes with a **responsive, mobile-friendly web interface** based on the Bootstrap SB Admin 2 template (<https://startbootstrap.com/template-overviews/sb-admin-2/), running on *lighttpd* and exposed on port 80. The web panel, written in PHP and protected with basic authentication, has no real business logic but just wraps CLI commands provided by the PiWebcam.sh script which the web server user has the rights to run as root. When changing the password, the same is applied to both the system and the web interface. 
 
-If **remote Internet access** is enabled, the device initiates a SSH tunnel through https://serveo.net/, **without the need to configure any NAT or UPnP** in your router. The device name is used as hostname and both the web and ssh services are exposed.  Autossh is used to keep the connection always alive.
+If **remote Internet access** is enabled, the device initiates a SSH tunnel through <https://serveo.net>, **without the need to configure any NAT or UPnP** in your router. The device name is used as hostname and both the web and ssh services are exposed.  Autossh is used to keep the connection always alive.
 
 Motion detection is based on the excellent **Motion Project software** (<https://github.com/Motion-Project>) which, among the others, is capable of generating a single notification when consecutive motions are detected so you will **not be overloaded with notifications**. **Only relevant settings are exposed** to the user while reasonable defaults are set during the device startup. Both **pictures and movies are stored into the data filesystem** and grouped in folders by year/month/day/hour so to allow an easier access. All the recordings can be reviewed through the web interface with h5ai (<https://larsjung.de/h5ai/>),  a **modern file indexer** which allows files and directories to be displayed in a appealing way and providing picture and video previews without the need to download the content beforehand.
 
-When a motion is detected, PiWebcam.sh is invoked with the "*notify*" parameter through the *on_picture_save* motion's event. 
-If object detection is enabled for further analyzing the image, the picture is sent to Clarifai (<https://clarifai.com/>) to **recognize all the objects** within the image. This would work great to lower down false positives e.g. if you are interested to know if there is somebody stealing in your house and not just a sudden light change. **For the security camera use case, Clarifai seems to fit best** since pretty accurate to identify objects and people whereas other services could be integrated in the future (Google Vision works great with landscapes but poorly to identify a person, Amazon Rekognition is accurate but prone to false negatives when identifying persons and its authentication schema is complex to integrate in a bash script).
+When a motion is detected, PiWebcam.sh is invoked with the "*notify*" parameter through the *on_picture_save*/*on_movie_end* motion's event. 
+If object detection is enabled for further analyzing the image, the picture is sent to Clarifai (<https://clarifai.com/>) to **recognize all the objects** within the image. This would work great to lower down false positives e.g. if you are interested to know if there is somebody stealing in your house and not just a sudden light change. **For the security camera use case, Clarifai seems to fit best** since pretty accurate to identify objects and people whereas other services could be integrated in the future (Google Vision works great with landscapes but poorly to identify a person, Amazon Rekognition is accurate but prone to false negatives when identifying persons and its authentication schema is complex to integrate in a bash script). If the AI service cannot be reached, the analysis is queue for when the connection is restored. In case of a false positive (e.g. there are no people in the motion picture), by default both the motion picture and video are deleted and no notification is sent.
 
-PiWebcam check if an Internet connection is available and if so, sends out the notification. In addition to traditional e-mail notifications, sent out with *ssmtp*, with the detected motion picture attached, PiWebcam can also upload the same picture to a **Slack channel**. If you don't know Slack, check it out (<https://slack.com/>); it is a great collaboration tool but can also be used to create a group dedicated to your family, grant access to your family members, chat with them and allow PiWebcam or Home Automation utilities  (like e.g. http://my-house.sourceforge.io) to post updates over there.
+After that, PiWebcam check if an Internet connection is available and if so, sends out the notification. In addition to traditional e-mail notifications, sent out with *ssmtp*, with the detected motion picture attached, PiWebcam can also upload the same picture to a **Slack channel**. If you don't know Slack, check it out (<https://slack.com/>); it is a great collaboration tool but can also be used to create a group dedicated to your family, grant access to your family members, chat with them and allow PiWebcam or Home Automation utilities  (like e.g. http://my-house.sourceforge.io) to post updates over there.
 If there is **no Internet connection, the notification does not get lost** but it is **queued and sent out when the connection is restored**.
 
 Periodically, through cron, PiWebcam.sh is called with the "*checkup*" parameter which will **perform routine tasks to ensure the system is running smoothly**. It will reboot the device if the overlayed root filesystem is almost full (even if this shouldn't happen), **remove oldest pictures and movies** from the data directory when the data filesystem fills up, process the notification queue, **restart core services** if no more running and try reconnecting to the network when disconnected.
 
 PiWebcam logs any activity in data filesystem so they survive a device reboot. Logs can be accessed and reviewed through the web interface as well.
 
-An **upgrade utility** is provided through the web interface as well. A zip file is expected to be uploaded containing a PiWebcam directory and the files of the new version of the software under it (the same package used during the installation). During an upgrade, all the files are extracted into a temporary directory the the PiWebcam.sh script of the new version is run with the "*upgrade*" parameter so to execute the version-specific upgrade routine. A basic upgrade will just replace the files in /boot/PiWebcam with the new one and the same can be done even manually.
+An **upgrade functionality** is provided through the web interface as well. A zip file is expected to be uploaded containing a PiWebcam directory and the files of the new version of the software under it (the same package used during the installation). During an upgrade, all the files are extracted into a temporary directory the the PiWebcam.sh script of the new version is run with the "*upgrade*" parameter so to execute the version-specific upgrade routine. A basic upgrade will just replace the files in /boot/PiWebcam with the new one and the same can be done even manually and install additional software if needed.
+
+When building an outdoor webcam, you might want to add to your project an external IR led board and a mechanical IR Cut filter and PiWebcam can handle all of those on your behalf. Night mode manually or automatically and for the latter a pin of the board (21 BCM) is monitored for changes; when turning HIGH, night mode is entered, when turning LOW is left. Entering night mode means turning on the IR leds (if connected) by setting HIGH a pin (26), toggling the IR CUT filter by sending a pulse to a pin (16 for OFF, 20 for ON) and adjusting camera settings for a better representation of the night scene. Keep in mind the GPIO pins cannot drive directly the IR Cut filter or the IR Leds; you would need a H-Bridge or a transitor in between to provide adequate current.
 
 Upon installation, the system and web password as well as the Access Point passphrase are all set to the default device name. Always keep in mind in PiWebcam usability has been preferred over security in most of the cases (no HTTPS, passwords stored in log files, etc.) so consider futher protecting the device from a security standpoint.
 
@@ -229,12 +238,14 @@ Additionally, any setting exposed through the web interface, can also be set pro
 * Disabling Power Management on WiFi interface
 * Generating empty configuration file (if not already there)
 * Creating data directory (if not already there)
+* Configure the GPIO
 * Deploying the admin web panel from /boot into the web root location
 * Run *configure_system*
 * Run *configure_services*
 * Run *configure_network*
 * Run *configure_camera*
 * Run *configure_notifications*
+* Monitor the value of the night mode pin by running as a background process 
 
 **Apply system settings configuration (run during startup and when changing system settings through the web panel)**
 
@@ -400,7 +411,23 @@ Additionally, any setting exposed through the web interface, can also be set pro
 * Restart core services if no more running
 * if disconnected from Internet, try reconnecting to the network
 
-** Save configuration settings (run when the saving settings from the web panel. Require "configure_*" to apply the changes)  **
+** Manually enable/disable night mode (run during startup if night mode is "ON" or "OFF" or, when "AUTO", by the "night_mode_service" process)**
+
+`sudo /boot/PiWebcam/PiWebcam.sh night_mode <0|1>`
+
+* toggle the IR Cut filter by sending a pulse to its pins (if connected)
+* turns on/off the IR Leds (if connected)
+
+** Check the requested night mode through the value of a pin (run during startup as a background process)**
+
+`sudo /boot/PiWebcam/PiWebcam.sh night_mode_service`
+
+* start in day mode when controlling night mode
+* wait for a (change) interrupt on the night mode trigger pin
+* read and set the requested mode (LOW: day, HIGH: night)
+* continue the cycle
+
+** Save a configuration setting (run when the saving settings from the web panel. Require "configure_*" to apply the changes)  **
 
 ```
 sudo /boot/PiWebcam/PiWebcam.sh set <setting> <value>
@@ -426,6 +453,7 @@ NETWORK_REMOTE_ACCESS | If set the device will be recheable from the Internet
 CAMERA_RESOLUTION | The resolution for picture/video
 CAMERA_ROTATE | Rotate image this number of degrees
 CAMERA_FRAMERATE | Maximum number of frames to be captured per second
+CAMERA_NIGHT_MODE | Adjust the camera settings and the IR LEDs and Cut filter (if connected) for night vision. It can be ON (always night), OFF (always day) or AUTO (enter night mode when the value of a pin changes)
 MOTION_RECORD_MOVIE | If set a movie (in addition to the picture) will be recorded upon motion
 MOTION_THRESHOLD | Number of changed pixels that triggers motion detection
 MOTION_FRAMES | The minimum number of frames in a row to be considered true motion
@@ -487,13 +515,23 @@ Raspberry Camera Night Vision Wide Angle  | $13 | https://www.aliexpress.com/ite
 * Project Page: http://piwebcam.sourceforge.io
 * User Manual: https://sourceforge.net/p/piwebcam/wiki
 * Bug Report: https://sourceforge.net/p/piwebcam/tickets
+* Instructables: https://www.instructables.com/id/Fully-featured-Outdoor-Security-Camera-Based-on-Ra/
 
 ## Changelog
 * v1.1:
-	* Added support for object detection and automatic image analysis
-	* Added configurable camera framerate and event gap setting to the the UI
-	* Enhanced upgrade process
+	* Added support for object detection and automatic image analysis through artifical intelligence models
+	* Added support for night vision and management of an IR Cut filter and IR Leds
+	* Added configurable camera framerate and motion event gap settings to the web interface
+	* Added option to disable (turn off) the power led of the board
+	* PiWebcam logs now accessible from the web interface
+	* Added option to notify the full movie instead of just the snapshot of the motion
+	* Added option to delete all the user's data but keeping the configuration ("Data Reset")
+	* Quicker startup and more robust shutdown/reboot processes
+	* Enhanced the upgrade routine
+	* The previous version is backed up during an upgrade
+	* The refresh interval of the live view can now be adjusted in realtime
 	* New API call "set" replacing all the "set_*" functions
-	* Minor fixes
+	* Fixed compatibility issues between Raspberry Pi Model 3 and Zero W
+	* Other minor fixes
 * v1.0:
     * First Release

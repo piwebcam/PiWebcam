@@ -1,7 +1,7 @@
 <?php 
 	include "header.php";
 	// form submitted
-	if(count($_REQUEST) > 0) {
+	if(count($_REQUEST) > 0 && $_REQUEST["action"] === "configure_network") {
 		save_config(array('WIFI_MODE','WIFI_AP_PASSPHRASE','WIFI_CLIENT_SSID','WIFI_CLIENT_PASSPHRASE','NETWORK_IP','NETWORK_GW','NETWORK_DNS','NETWORK_REMOTE_ACCESS'));
 		run("configure_network");
 		load_config();
@@ -18,6 +18,7 @@
                         </div>
                         <div class="panel-body">
 							<form id="form" method="POST" role="form">
+							<input type="hidden" name="action" value="configure_network">
 								<div class="row">
 									<div class="col-lg-6">
 										<div class="panel panel-default">

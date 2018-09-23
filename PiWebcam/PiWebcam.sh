@@ -46,12 +46,14 @@ DATA_MOUNT_POINT="/mnt"
 export DATA_DIR="$DATA_MOUNT_POINT/data"
 # where to persist our files (logs, notification queue, etc)
 PERSIST_DIR="$DATA_MOUNT_POINT/$MY_NAME"
-# location of the log file
-export LOG_FILE=$PERSIST_DIR/$MY_NAME.log
 # the directory through which pictures and movies are exposed inside the web root
 export PLAYBACK_DIR="playback"
 # the size of the root filesystem
 ROOT_PARTITION_SIZE="4G"
+# location of the log file
+MY_LOG_FILE=$PERSIST_DIR/$MY_NAME.log
+# maximum number of lines of the log files
+MY_LOG_MAX_LINES=10000
 # if enabled, the installer will not ask user confirmation
 SILENT_INSTALL=0
 # the partition of the boot/root/data filesystem
@@ -63,7 +65,7 @@ NOTIFICATION_SUBJECT="Motion Detected"
 # where to store the notification queue if internet is not available
 NOTIFICATION_QUEUE="$PERSIST_DIR/notification_queue"
 # how many notifications to keep in the queue
-NOTIFICATION_QUEUE_SIZE=20
+NOTIFICATION_QUEUE_SIZE=30
 # the command to execute to check if we have an internet connection
 INTERNET="ping -W 2 -c 1 8.8.8.8|grep time=|wc -l"
 # cleanup the filesystem if above the threshold in percentage
@@ -74,6 +76,16 @@ WEB_PASSWD_FILE="/etc/lighttpd/$MY_NAME.users"
 # escaped variables so can be used in the script
 ESCAPED_MY_FILE=`echo $MY_FILE|sed 's|/|\\\/|g'`
 ESCAPED_DATA_DIR=`echo $DATA_DIR|sed 's|/|\\\/|g'`
+# the file to create when night mode is enabled
+NIGHT_MODE_STATUS="/tmp/night_mode"
+# The GPIO pin to monitor for entering/leaving night mode (BCM pin number)
+NIGHT_MODE_PIN=21
+# The GPIO pin attached to the "off" wire of the IR cut filter (BCM pin number)
+IR_FILTER_ON_PIN=20
+# The GPIO pin attached to the "on" wire of the IR cut filter (BCM pin number)
+IR_FILTER_OFF_PIN=16
+# The GPIO pin for controlling the IR Leds (BCM pin number)
+IR_LED_PIN=26
 
 ### location of system configuration files and directories
 NETWORK_CONFIG="/etc/dhcpcd.conf"
@@ -119,11 +131,12 @@ source $MY_CONFIG 2> /dev/null
 
 # print out a banner
 function print_banner {
-base64 -d <<<"X19fX19fIF8gXyAgICBfICAgICAgXwp8IF9fXyAoXykgfCAgfCB8ICAgIHwgfAp8IHxfLyAvX3wg
-fCAgfCB8IF9fX3wgfF9fICAgX19fIF9fIF8gXyBfXyBfX18KfCAgX18vfCB8IHwvXHwgfC8gXyBc
-ICdfIFwgLyBfXy8gXyBfIFwKfCB8ICAgfCBcICAvXCAgLyAgX18vIHxfKSB8IChffCAoX3wgfCB8
-IHwgfCB8IHwKXF98ICAgfF98XC8gIFwvIFxfX198Xy5fXy8gXF9fX1xfXyxffF98IHxffCB8X3wK
-Cgo="
+base64 -d <<<"IF9fX19fXyBfIF8gICAgXyAgICAgIF8gICAgICAgICAgICAgICAgICAgICAgICAgCiB8IF9fXyAo
+XykgfCAgfCB8ICAgIHwgfCAgICAgICAgICAgICAgICAgICAgICAgIAogfCB8Xy8gL198IHwgIHwg
+fCBfX198IHxfXyAgIF9fXyBfXyBfIF8gX18gX19fICAKIHwgIF9fL3wgfCB8L1x8IHwvIF8gXCAn
+XyBcIC8gX18vIF9gIHwgJ18gYCBfIFwgCiB8IHwgICB8IFwgIC9cICAvICBfXy8gfF8pIHwgKF98
+IChffCB8IHwgfCB8IHwgfAogXF98ICAgfF98XC8gIFwvIFxfX198Xy5fXy8gXF9fX1xfXyxffF98
+IHxffCB8X3wKIAoK"
 }
 
 # log/echo a message ($1: message)
@@ -135,7 +148,9 @@ function log {
 	if [[ -z "$REMOTE_ADDR" ]]; then
 		REMOTE_ADDR="127.0.0.1"
 	fi
-	echo "[$NOW][$REMOTE_ADDR] $1" >> $LOG_FILE
+	if [[ -f  $MY_LOG_FILE ]]; then
+		echo "[$NOW][$REMOTE_ADDR] $1" >> $MY_LOG_FILE
+	fi
 }
 if [ "$1" = "log" ]; then
 	log "$2"
@@ -143,7 +158,7 @@ fi
 
 # show 
 function show_logs {
-	tail -200 $LOG_FILE
+	tail -200 $MY_LOG_FILE
 }
 if [ "$1" = "show_logs" ]; then
 	show_logs
@@ -284,7 +299,7 @@ function restart_network {
 
 # load/reload configuration from file
 function load_config {
-	log "Loading configuration file $MY_CONFIG"
+	#log "Loading configuration file $MY_CONFIG"
 	source $MY_CONFIG 2> /dev/null
 }
 
@@ -315,6 +330,9 @@ function save_config {
 	fi
 	if [[ -z "$CAMERA_FRAMERATE" ]]; then
 		CAMERA_FRAMERATE=5
+	fi
+	if [[ -z "$CAMERA_NIGHT_MODE" ]]; then
+		CAMERA_NIGHT_MODE="AUTO"
 	fi
 	if [[ -z "$MOTION_RECORD_MOVIE" ]]; then
 		MOTION_RECORD_MOVIE=1
@@ -386,6 +404,8 @@ CAMERA_RESOLUTION='$CAMERA_RESOLUTION'
 CAMERA_ROTATE='$CAMERA_ROTATE'
 # Maximum number of frames to be captured per second (default: 5)
 CAMERA_FRAMERATE='$CAMERA_FRAMERATE'
+# Adjust the camera settings and the IR LEDs and Cut filter (if connected) for night vision. It can be ON (always night), OFF (always day) or AUTO (enter night mode when the value of a pin changes)
+CAMERA_NIGHT_MODE='$CAMERA_NIGHT_MODE'
 
 # If set a movie (in addition to the picture) will be recorded upon motion
 MOTION_RECORD_MOVIE='$MOTION_RECORD_MOVIE'
@@ -747,7 +767,7 @@ function installer {
 		### install dependencies
 		log "Installing dependencies"
 		apt-get update
-		apt-get -y install busybox dnsmasq hostapd f2fs-tools lighttpd motion php-fpm php-cgi php-gd zip sharutils ssmtp jq mpack autossh
+		apt-get -y install busybox dnsmasq hostapd f2fs-tools lighttpd motion php-fpm php-cgi php-gd zip sharutils ssmtp jq mpack autossh wiringpi
 		# stop and disable all the services
 		log "Disabling services"
 		stop_services
@@ -844,6 +864,89 @@ if [ "$1" = "install-silent" ]; then
 	installer
 fi
 
+#############
+# Night mode
+#############
+
+# send a pulse to a pin of the GPIO ($1: BCM pin number)
+function gpio_pulse {
+	gpio -g write $1 1
+	sleep 0.5
+	gpio -g write $1 0
+}
+
+# set night mode to the requested value ($1: 0 off, 1 on, $2: force)
+function night_mode {
+	if [[ "$1" == "1" ]] && [[ ! -f "$NIGHT_MODE_STATUS" || "$2" == "force" ]]; then
+		log "Entering night mode"
+		# send a short pulse to the "on" pin of the IR cut filter
+		gpio_pulse $IR_FILTER_ON_PIN
+		# turn on IR Leds
+		gpio -g write $IR_LED_PIN 1
+		# adjust camera settings
+		v4l2-ctl --set-ctrl=exposure_dynamic_framerate=1 --set-ctrl=auto_exposure_bias=24 --set-ctrl=color_effects=1
+		/etc/init.d/motion restart
+		# update status
+		echo `date +%s` > $NIGHT_MODE_STATUS
+	fi
+	if [[ "$1" == "0" ]] && [[ -f "$NIGHT_MODE_STATUS" || "$2" == "force" ]]; then
+		log "Leaving night mode"
+		# send a short pulse to the "off" pin of the IR cut filter
+		gpio_pulse $IR_FILTER_OFF_PIN
+		# turn off IR Leds
+		gpio -g write $IR_LED_PIN 0
+		# adjust camera settings
+		v4l2-ctl --set-ctrl=exposure_dynamic_framerate=0 --set-ctrl=auto_exposure_bias=12 --set-ctrl=color_effects=0
+		/etc/init.d/motion restart
+		# update status
+		rm -f $NIGHT_MODE_STATUS
+	fi
+	if [[ -z "$1" ]]; then
+		# when no parameters are provided, print put the current night mode status
+		if [[ -f "$NIGHT_MODE_STATUS" ]]; then
+			echo "1"
+		else
+			echo "0"
+		fi
+	fi
+}
+if [ "$1" = "night_mode" ]; then
+	night_mode $2
+fi
+if [ "$1" = "force_night_mode" ]; then
+	night_mode $2 force
+fi
+
+if [ "$1" = "night_mode_service" ]; then
+	log "Starting night mode service"
+	NIGHT_MODE_PROCESS=`ps aux|grep gpio|grep wfi|wc -l`
+	if [[ $NIGHT_MODE_PROCESS -ge 1 ]]; then
+		log "Night mode process already running, exiting"
+		exit
+	fi
+	if [[ $CAMERA_NIGHT_MODE == "AUTO" ]]; then
+		# start in day mode when controlling night mode
+		night_mode 0
+	fi
+	log "Monitoring night mode trigger pin $NIGHT_MODE_PIN..."
+	while true; do
+		# wait for a (change) interrupt on the night mode trigger pin
+		gpio -g wfi $NIGHT_MODE_PIN both
+		# wait a bit to do some sort of debounce to the signal
+		sleep 1
+		# read the requested mode (LOW: day, HIGH: night)
+		REQUESTED_NIGHT_MODE=$(gpio -g read $NIGHT_MODE_PIN)
+		# reload the configuration (something might have changed meanwhile)
+		load_config
+		if [[ $CAMERA_NIGHT_MODE == "AUTO" ]]; then
+			# set the night mode
+			night_mode $REQUESTED_NIGHT_MODE
+		fi
+		# sleep to avoid frequent consecutive changes
+		sleep 1
+	done
+fi
+
 #################
 # Configure
 #################
@@ -884,10 +987,18 @@ function configure_system {
 	if [[ $DEVICE_LED == 0 ]]; then
 		log "Turning off the LEDs"
 		echo none | tee /sys/class/leds/led0/trigger
-		echo 0 | tee /sys/class/leds/led0/brightness
+		if cat /proc/device-tree/model |grep -q Zero; then
+			echo 1 | tee /sys/class/leds/led0/brightness
+		else
+			echo 0 | tee /sys/class/leds/led0/brightness
+		fi
 		if [[ -x "/sys/class/leds/led1" ]]; then
 			echo none | tee /sys/class/leds/led1/trigger
-			echo 0 | tee /sys/class/leds/led1/brightness
+			if cat /proc/device-tree/model |grep -q Zero; then
+				echo 1 | tee /sys/class/leds/led1/brightness
+			else
+				echo 0 | tee /sys/class/leds/led1/brightness
+			fi
 		fi
 	else
 		echo mmc0 | tee /sys/class/leds/led0/trigger
@@ -955,12 +1066,14 @@ function configure_services {
 		
 	### ssh configuration
 	log "Configuring ssh"
-	echo "PermitEmptyPasswords yes" >> /etc/ssh/sshd_config
-	echo "ssh" >> /etc/securetty
+	append "PermitEmptyPasswords yes" /etc/ssh/sshd_config
+	append "ssh" /etc/securetty
 	/etc/init.d/ssh restart
 	
-	### configure checkup cron job
-	(crontab -l 2>/dev/null; echo "*/30 * * * * $MY_FILE checkup 2>&1 >/dev/null")| crontab -
+	### configure cron jobs
+	CRON_JOB="/etc/cron.d/$MY_NAME"
+	echo "MAILTO=\"\"" > $CRON_JOB
+	echo "*/30 * * * * root $MY_FILE checkup 2>&1 >/dev/null" >> $CRON_JOB
 }
 
 # configure remote internet access through serveo.net
@@ -1117,9 +1230,21 @@ function configure_camera {
 		log "Set to process motion event pictures"
 		sed -i -E "s/^; on_picture_save .+/on_picture_save sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
 	fi
+	
 	# restart motion
 	log "Restarting camera"
 	/etc/init.d/motion restart
+	
+	# set night mode
+	if [[ $CAMERA_NIGHT_MODE == "ON" ]]; then
+		night_mode 1
+	fi
+	if [[ $CAMERA_NIGHT_MODE == "OFF" ]]; then
+		night_mode 0
+	fi
+	if [[ $CAMERA_NIGHT_MODE == "AUTO" ]]; then
+		night_mode `gpio -g read $NIGHT_MODE_PIN`
+	fi
 }
 
 # configure the notifications
@@ -1153,6 +1278,7 @@ function configure_admin_panel {
 
 # CLI
 if [ "$1" = "configure" ]; then
+	log "-----"
 	log "Configuring this device for $MY_NAME v$MY_VERSION"
 	
 	# adjust system settings
@@ -1164,11 +1290,12 @@ if [ "$1" = "configure" ]; then
 	sysctl -w kernel.panic_on_oops=1
 	
 	log "Customizing motd"
-	base64 -d <<<"X19fX19fIF8gXyAgICBfICAgICAgXwp8IF9fXyAoXykgfCAgfCB8ICAgIHwgfAp8IHxfLyAvX3wg
-fCAgfCB8IF9fX3wgfF9fICAgX19fIF9fIF8gXyBfXyBfX18KfCAgX18vfCB8IHwvXHwgfC8gXyBc
-ICdfIFwgLyBfXy8gXyBfIFwKfCB8ICAgfCBcICAvXCAgLyAgX18vIHxfKSB8IChffCAoX3wgfCB8
-IHwgfCB8IHwKXF98ICAgfF98XC8gIFwvIFxfX198Xy5fXy8gXF9fX1xfXyxffF98IHxffCB8X3wK
-Cgo=" > /etc/motd
+	base64 -d <<<"IF9fX19fXyBfIF8gICAgXyAgICAgIF8gICAgICAgICAgICAgICAgICAgICAgICAgCiB8IF9fXyAo
+XykgfCAgfCB8ICAgIHwgfCAgICAgICAgICAgICAgICAgICAgICAgIAogfCB8Xy8gL198IHwgIHwg
+fCBfX198IHxfXyAgIF9fXyBfXyBfIF8gX18gX19fICAKIHwgIF9fL3wgfCB8L1x8IHwvIF8gXCAn
+XyBcIC8gX18vIF9gIHwgJ18gYCBfIFwgCiB8IHwgICB8IFwgIC9cICAvICBfXy8gfF8pIHwgKF98
+IChffCB8IHwgfCB8IHwgfAogXF98ICAgfF98XC8gIFwvIFxfX198Xy5fXy8gXF9fX1xfXyxffF98
+IHxffCB8X3wKIAoK" > /etc/motd
 	
 	log "Disabling under-voltage warnings"
 	sed -i '1s/^/:msg, contains, \"oltage\" stop\n/' /etc/rsyslog.conf
@@ -1206,6 +1333,19 @@ Cgo=" > /etc/motd
 		mkdir -p $PERSIST_DIR
 	fi
 	
+	log "Configuring GPIO"
+	# configure as input the pin from which we will be notified to enter night mode (when HIGH)
+	gpio -g mode $NIGHT_MODE_PIN in
+	gpio -g mode $NIGHT_MODE_PIN down
+	# configure as output the pins for controlling the IR filter
+	gpio -g mode $IR_FILTER_ON_PIN out
+	gpio -g mode $IR_FILTER_OFF_PIN out
+	gpio -g write $IR_FILTER_ON_PIN 0
+	gpio -g write $IR_FILTER_OFF_PIN 0
+	# configure as output the pins for controlling the IR Leds
+	gpio -g mode $IR_LED_PIN out
+	gpio -g write $IR_LED_PIN 0
+	
 	log "Deploying the admin web panel"
 	configure_admin_panel
 	
@@ -1219,6 +1359,9 @@ Cgo=" > /etc/motd
 	configure_camera
 	# configure notifications
 	configure_notifications
+	
+	# start the night mode background process
+	$MY_FILE night_mode_service >/dev/null &
 fi
 
 if [ "$1" = "configure_system" ]; then
@@ -1306,7 +1449,8 @@ function import_firmware {
 		log "Executing upgrade routine on file $FILE"
 		if [ -f $FILE ]; then
 			chmod 755 $FILE
-			$FILE upgrade $MY_VERSION &
+			# run the upgrade in background
+			nohup $FILE upgrade $MY_VERSION > /dev/null 2>&1 &
 		else
 			log "Invalid firmware, $FILE not found"
 		fi
@@ -1321,12 +1465,13 @@ function upgrade {
 	if [[ -n "$1" ]]; then
 		if [[ $(eval $INTERNET) = "1" ]]; then
 			log "Upgrading from v$1 to v$MY_VERSION"
+			sleep 5
 			enable_write_boot
 			
 			# install dependencies
-			log "Installing dependencies"
-			if ! which jq >/dev/null; then
-				chroot_lower "apt-get update; apt-get -y install jq"
+			if [[ ! -x "/usr/bin/jq" || ! -x "/usr/bin/gpio" ]]; then
+				log "Installing dependencies"
+				chroot_lower "apt-get update; apt-get -y install jq wiringpi"
 			fi
 			
 			# update the system configuration
@@ -1430,6 +1575,8 @@ if [ "$1" = "downgrade" ]; then
 		disable_write_boot
 		# deploy the admin panel
 		configure_admin_panel
+		# reboot
+		hard_reboot
 	fi
 fi
 
@@ -1511,12 +1658,21 @@ FILEIN
 						log "Ignoring motion, $AI_OBJECT was not found in $FILENAME"
 						# do not notify
 						NOTIFY=0
+						DIR_NAME=`dirname $FILENAME`
+						EVENT_NUMBER=`basename $FILENAME | cut -d'-' -f1`
 						if [[ $AI_KEEP_NOT_FOUND != "1" ]]; then
 							# remove both the picture and the video of the recorded motion
-							DIR_NAME=`dirname $FILENAME`
-							EVENT_NUMBER=`basename $FILENAME | cut -d'-' -f1`
 							rm -f $DIR_NAME/${EVENT_NUMBER}-*
 							rm -f $DIR_NAME/video/${EVENT_NUMBER}-*
+							rmdir $DIR_NAME/video 2>/dev/null
+							rmdir $DIR_NAME 2>/dev/null
+						else
+							# keep the file but move them into a different location
+							DELETED_DIR="$DIR_NAME/deleted"
+							mkdir -p $DELETED_DIR
+							mkdir -p $DELETED_DIR/video
+							mv $DIR_NAME/${EVENT_NUMBER}-* $DELETED_DIR
+							mv $DIR_NAME/video/${EVENT_NUMBER}-* $DELETED_DIR/video
 						fi
 					fi
 				else
@@ -1581,7 +1737,7 @@ if [ "$1" = "checkup" ]; then
 	### process the notification queue if not empty and we have an Internet connection
 	if [[ -f "$NOTIFICATION_QUEUE" && $(eval $INTERNET) = "1" ]]; then
 		# for each item run the notify command
-		while read in; do log "Processing $in from the notification queue"; $MY_FILE motion $in;  done < $NOTIFICATION_QUEUE
+		while read in; do log "Processing $in from the notification queue"; $MY_FILE motion $in; sleep 1;  done < $NOTIFICATION_QUEUE
 		# empty the queue
 		rm -f $NOTIFICATION_QUEUE
 	fi
@@ -1621,12 +1777,39 @@ if [ "$1" = "checkup" ]; then
 			configure_network
 		fi
 	fi
+	# ensure the night mode process is running
+	NIGHT_MODE_PROCESS=`ps aux|grep gpio|grep wfi|wc -l`
+	if [[ $NIGHT_MODE_PROCESS == 0 ]]; then
+		log "Restarting night mode service"
+		killall gpio 2>/dev/null
+		$MY_FILE night_mode_service >/dev/null &
+	fi
 	
 	### clean up the log file if too big
-	MAX_LINES=1000
-	if [[ $(cat $LOG_FILE|wc -l) -gt $MAX_LINES ]]; then
-		log "Cleaning up log file $LOG_FILE"
-		echo "$(tail -$MAX_LINES $LOG_FILE)" > $LOG_FILE
+	THRESHOLD=$((MY_LOG_MAX_LINES+100))
+	if [[ $(cat $MY_LOG_FILE|wc -l) -gt $THRESHOLD ]]; then
+		log "Cleaning up log file $MY_LOG_FILE"
+		echo "$(tail -$MY_LOG_MAX_LINES $MY_LOG_FILE)" > $MY_LOG_FILE
+	fi
+	
+	# fix night mode
+	if [[ $CAMERA_NIGHT_MODE == "AUTO" ]]; then
+		log "Fixing night mode"
+		REQUESTED_NIGHT_MODE=$(gpio -g read $NIGHT_MODE_PIN)
+		if [[ $REQUESTED_NIGHT_MODE == "1" && ! -f "$NIGHT_MODE_STATUS" ]]; then
+			night_mode 1
+		fi
+		if [[ $REQUESTED_NIGHT_MODE == "0" && -f "$NIGHT_MODE_STATUS" ]]; then
+			night_mode 0
+		fi
+	fi
+	if [[ $CAMERA_NIGHT_MODE == "ON" && ! -f "$NIGHT_MODE_STATUS" ]]; then
+		log "Fixing night mode"
+		night_mode 1
+	fi
+	if [[ $CAMERA_NIGHT_MODE == "OFF" && -f "$NIGHT_MODE_STATUS" ]]; then
+		log "Fixing night mode"
+		night_mode 0
 	fi
 fi
 

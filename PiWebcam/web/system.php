@@ -3,14 +3,14 @@
 	// form submitted
 	if(count($_REQUEST) > 0) {
 		// system configuration form
-		if ($_REQUEST["action"] === "system") {
+		if ($_REQUEST["action"] === "configure_system") {
 			save_config(array('DEVICE_NAME','DEVICE_PASSWORD','DEVICE_TIMEZONE','DEVICE_COUNTRY_CODE','DEVICE_LED','DEBUG'));
 			run("configure_system");
 			load_config();
 			array_push($message["success"],"Configuration applied successfully");
 		}
 		// export configuration form
-		if ($_REQUEST["action"] === "export") {
+		if ($_REQUEST["action"] === "export_config") {
 			// make the user downloading the configuration file
 			$config = run("show_config");
 			header("Content-Disposition: attachment; filename=\"PiWebcam.conf\"");
@@ -21,7 +21,7 @@
 			exit();
 		}
 		// import configuration form
-		if ($_REQUEST["action"] === "import") {
+		if ($_REQUEST["action"] === "import_config") {
 			if ($_FILES["file"]["error"] === 0) {
 				// import the configuration file
 				run("import_config '".$_FILES["file"]["tmp_name"]."'");
@@ -35,8 +35,7 @@
 			if ($_FILES["file"]["error"] === 0) {
 				// import the firmware
 				run("import_firmware '".$_FILES["file"]["tmp_name"]."'");
-				load_config();
-				array_push($message["warning"],"Device update is in progress. Please wait until the system restarts");
+				array_push($message["warning"],"The upgrade in progress, the device will reboot once finished.");
 			} else array_push($message["danger"],"Invalid firmware provided");
 		}
 		// reboot form
@@ -79,7 +78,7 @@
 										<div class="panel-body">
 										<h3>Device Settings</h3>
 											<form id="form" method="POST" role="form">
-											<input type="hidden" name="action" value="system">
+											<input type="hidden" name="action" value="configure_system">
 												<div class="form-group">
 													<label>Name</label>
 													<input class="form-control" name="DEVICE_NAME" value="<?php print $config["DEVICE_NAME"] ?>" required>
@@ -146,7 +145,7 @@
 										<div class="panel-body">
 										<h3>Configuration</h3>
 											<form method="POST" role="form">
-											<input type="hidden" name="action" value="export">
+											<input type="hidden" name="action" value="export_config">
 											<input type="hidden" name="no_headers" value="1">
 												<label>Export configuration</label>
 												<div class="form-group">
@@ -155,7 +154,7 @@
 												</div>
 											</form>
 											<form id="import_form" method="POST" role="form" enctype="multipart/form-data">
-											<input type="hidden" name="action" value="import">
+											<input type="hidden" name="action" value="import_config">
 												<label>Import configuration</label>
 												<div class="form-group">
 													<input name="file" type="file">

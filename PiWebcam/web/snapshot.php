@@ -4,7 +4,7 @@
 	include "header.php";
 	// generate the snapshot
 	file_get_contents('http://localhost:8080/0/action/snapshot');
-	sleep(2);
+	sleep(3);
 	
 	// display the file
 	$file = $env["DATA_DIR"]."/lastsnap.jpg";
