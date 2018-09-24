@@ -148,9 +148,7 @@ function log {
 	if [[ -z "$REMOTE_ADDR" ]]; then
 		REMOTE_ADDR="127.0.0.1"
 	fi
-	if [[ -f  $MY_LOG_FILE ]]; then
-		echo "[$NOW][$REMOTE_ADDR] $1" >> $MY_LOG_FILE
-	fi
+	echo "[$NOW][$REMOTE_ADDR] $1" 2>/dev/null >> $MY_LOG_FILE
 }
 if [ "$1" = "log" ]; then
 	log "$2"
@@ -1466,7 +1464,6 @@ function upgrade {
 		if [[ $(eval $INTERNET) = "1" ]]; then
 			log "Upgrading from v$1 to v$MY_VERSION"
 			sleep 5
-			enable_write_boot
 			
 			# install dependencies
 			if [[ ! -x "/usr/bin/jq" || ! -x "/usr/bin/gpio" ]]; then
@@ -1480,6 +1477,7 @@ function upgrade {
 				log "Disable apt daily service"
 				chroot_lower "systemctl disable apt-daily.service; systemctl disable apt-daily.timer; systemctl disable apt-daily-upgrade.timer; systemctl disable apt-daily-upgrade.service"
 			fi
+			enable_write_boot
 			if [ ! -f $INITRAMFS_IMAGE7 ]; then
 				# create two initramfs for each available kernel so the SD card can be moved across devices
 				log "Updating initramfs"
