@@ -1,7 +1,12 @@
+		<div class="row">
+			<div class="col-lg-12">
+				 <div class="pull-right">
+					<h5><small>PiWebcam v<?php print $env["MY_VERSION"] ?> (Build <?php print $env["MY_BUILD"] ?>)</small></h5>
+				</div>
+			</div>
         </div>
 
     </div>
-    <!-- /#wrapper -->
 
     <!-- jQuery -->
     <script src="js/jquery.min.js"></script>

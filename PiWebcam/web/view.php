@@ -5,7 +5,7 @@
 	if(count($_REQUEST) > 0 && $_REQUEST["action"] === "night_mode") {
 		run("night_mode ".$_REQUEST["night_mode"]);
 	}
-	$night_status = run("night_mode");
+	$night_mode_status = run("night_mode_status");
 ?>
             <div class="row">
                 <div class="col-lg-12">
@@ -18,7 +18,7 @@
 								<div class="col-lg-10 col-lg-offset-1">
 									<center><img id="video" src="video.php" border="0" width="100%"></center>
 									<script type="text/javascript">
-										refresh = setInterval(function(){$("#video").attr("src", "video.php?"+new Date().getTime());},2000);
+										refresh = setInterval(function(){$("#video").attr("src", "video.php?"+new Date().getTime());},3000);
 									</script>
 								</div>
 							</div>
@@ -29,8 +29,8 @@
 									<form method="POST" role="form">
 									<input type="hidden" name="action" value="night_mode">
 										<div class="btn-group" role="group">
-											<button name="night_mode" value="0" type="submit" class="btn btn-sm btn-<?php echo $night_status == 0 ?  "primary" : "default" ?>"><i class="fa fa-sun-o"></i></button>
-											<button name="night_mode" value="1" type="submit" class="btn btn-sm btn-<?php echo $night_status == 1 ?  "primary" : "default" ?>"><i class="fa fa-moon-o"></i></button>
+											<button name="night_mode" value="0" type="submit" class="btn btn-sm btn-<?php echo $night_mode_status == 0 ?  "primary" : "default" ?>"><i class="fa fa-sun-o"></i></button>
+											<button name="night_mode" value="1" type="submit" class="btn btn-sm btn-<?php echo $night_mode_status == 1 ?  "primary" : "default" ?>"><i class="fa fa-moon-o"></i></button>
 										</div>
 									</form>
 								</center>
@@ -50,7 +50,7 @@
 												<span class="fa fa-minus"></span>
 											</button>
 										</span>
-										<input id="refresh_interval" type="text" class="form-control input-number" value="2">
+										<input id="refresh_interval" type="text" class="form-control input-number" value="3">
 										<span class="input-group-btn">
 											<button type="button" class="btn btn-default btn-number" onclick='
 											clearInterval(refresh);

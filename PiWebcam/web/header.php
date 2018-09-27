@@ -133,7 +133,6 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
 
     <div id="wrapper">
 
-        <!-- Navigation -->
         <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
@@ -142,7 +141,7 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="index.php"><?php print $env["MY_NAME"] ?> v<?php print $env["MY_VERSION"] ?></a>
+                <a class="navbar-brand" href="index.php"><?php print $env["MY_NAME"] ?></a>
             </div>
 
             <div class="navbar-default sidebar" role="navigation">
@@ -161,7 +160,7 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
                                     <a href="notification.php"><i class="fa fa-bell fa-fw"></i> Notifications</a>
                                 </li>
                                 <li>
-                                    <a href="settings.php"><i class="fa fa-wrench fa-fw"></i> Settings</a>
+                                    <a href="camera.php"><i class="fa fa-wrench fa-fw"></i> Settings</a>
                                 </li>
                             </ul>
                         </li>
@@ -169,7 +168,7 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
                             <a href="#"><i class="fa fa-fw"></i>Device<span class="fa arrow"></span></a>
                             <ul class="nav nav-second-level">
                                 <li>
-                                    <a href="status.php"><i class="fa fa-dashboard fa-fw"></i> Status</a>
+                                    <a href="status.php"><i class="fa fa-check-square-o fa-fw"></i> Status</a>
                                 </li>
                                 <li>
                                     <a href="network.php"><i class="fa fa-signal fa-fw"></i> Network</a>
@@ -182,11 +181,20 @@ if (! array_key_exists("no_headers",$_REQUEST)) {
                                 </li>
                             </ul>
                         </li>
+                        <li>
+                            <a href="#"><i class="fa fa-fw"></i>About<span class="fa arrow"></span></a>
+                            <ul class="nav nav-second-level">
+                                <li>
+                                    <a href="manual.php"><i class="fa fa-book fa-fw"></i> User Guide</a>
+                                </li>
+                                <li>
+                                    <a target="_blank" href="<?php echo $env["MY_URL"]?>"><i class="fa fa-external-link fa-fw"></i> Project Home Page</a>
+                                </li>
+                            </ul>
+                        </li>
                     </ul>
                 </div>
-                <!-- /.sidebar-collapse -->
             </div>
-            <!-- /.navbar-static-side -->
         </nav>
 
         <div id="page-wrapper">

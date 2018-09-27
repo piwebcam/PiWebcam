@@ -3,12 +3,14 @@
 When I need a webcam for monitoring my house or my backyard I use to go and buy it on Amazon/Aliexpress/ebay/Walmart/etc.
 True, you can find very **cheap models** with a lot of features but most of the times I've been very **disappointed of my shopping experience**.
 
-This is because these cheap Chinese or Chinese-rebranded cameras usually comes with a **poorly written software** on board and/or **inadequate hardware**. Sometimes the night vision is not working well or at all, it requires an obscure app to be installed on your mobile for a simple configuration, video recording is not accurate, the camera does not have on-board storage for offline recording, there is no web interface to intaract with, if you enable motion detection, it starts originating thousands notifications forcing you to eventually turn everything off. This is just to name only some of the issues I've faced so far. 
+This is because these cheap Chinese or Chinese-rebranded cameras usually comes with a **poorly written software** on board and/or **inadequate hardware**. Sometimes the night vision is not working well or at all, it requires an obscure app to be installed on your mobile for a simple configuration, video recording is not accurate, the camera does not have on-board storage for offline recording, there is no web interface to interact with, if you enable motion detection, it starts originating thousands notifications forcing you to eventually turn everything off. This is just to name only some of the issues I've faced so far. 
 I then started exploring **alternative options** such as building it by myself and a **Raspberry Pi** looked to me the most suitable platform for this project due to its size, cost, availability and built-in imaging software and hardware.
 
 There are **already around a good number of projects** for using a Raspberry Pi as a webcam but generally speaking they **requires advanced knowledge** and skills and they look like **more ad-hoc solutions rather than finite products**.
 
-**PiWebcam** is intended to provide a powerful imaging platform **for everyone, regardless of his/her previous knowledge**. An installation script will take care of fully configuring the system with resonable default settings, letting the user customizing through a **clean and mobile-friendly web interface** only a very limited number of relevant parameters. Nevertheless, thanks to its **powerful motion detection feature** augmented by an **object recognition capabilities** powered by an **artificial intelligence model**, PiWebcam can **notify the user** of any detected motion by sending a snapshot to an e-mail recipient or on posting it the user's favorite Slack channel.
+**PiWebcam** is intended to provide a powerful imaging platform **for everyone, regardless of his/her previous knowledge**, ideal for the security camera use case. An installation script will take care of fully configuring the system with reasonable default settings, letting the user customizing through a **clean and mobile-friendly web interface** only a very limited number of relevant parameters. Nevertheless, thanks to its **powerful motion detection feature** augmented by an **object recognition capabilities** powered by an **artificial intelligence model**, PiWebcam can **notify the user** of any detected motion by sending a snapshot to an e-mail recipient or on posting it the user's favorite Slack channel.
+
+With PiWebcam you can definitely build with no effort a professional webcam which works well also for night vision (with automatic control of IR Leds and IR-Cut filter, whenever connected). 
 
 Main features include:
 
@@ -61,7 +63,7 @@ Furthermore, the configuration file (`PiWebcam.conf`) is stored in the boot part
 
 # Getting Started
 
-PiWebcam already comes with reasonable default settings. Once installed, no additional configuration is required; PiWebcam will start taking snapshots and record videos, wheater is connected or not to the network.
+PiWebcam already comes with reasonable default settings. Once installed, no additional configuration is required; PiWebcam will start taking snapshots and record videos, whether is connected or not to the network.
 
 To access the webcam and/or customize the settings, connect to the web admin panel (default credentials are summarized at the end of the installation and reported in the "*Default Credentials*" section below). 
 
@@ -80,7 +82,7 @@ The following menu is available through the web interface:
 
 A detailed summary of all the available settings is reported in the "*Configuration*" section below.
 
-When a motion is detected, PiWebcam will start recording a video (which will then be made available through the "*Playback*" menu of the web interface).  Once there will be no more motion, a picture highlighting with a red box the detected motion will be stored as well. If the object detection feature is enabled, any motion not containing the configured object wil be ignored so to lower down false positives (e.g. if a motion is detected but no person is identified).
+When a motion is detected, PiWebcam will start recording a video (which will then be made available through the "*Playback*" menu of the web interface).  Once there will be no more motion, a picture highlighting with a red box the detected motion will be stored as well. If the object detection feature is enabled, any motion not containing the configured object will be ignored so to lower down false positives (e.g. if a motion is detected but no person is identified).
 
 When notifications are enabled, the snapshot will be sent to the user's e-mail address and/or posted on the configured Slack channel. If an Internet connection is not available, the notification will be queued and released when the connection is restored next.
 
@@ -103,7 +105,7 @@ The following  settings can be customized through the admin web panel.
 
 ## System Settings
 
-* **Name**: The name of this device. Will be used as the hostame, as a prefix in the notifications and as sub-domain for Internet access
+* **Name**: The name of this device. Will be used as the hostname, as a prefix in the notifications and as sub-domain for Internet access
 * **Password**: The same password will be then used for both SSH and web
 * **Timezone**: The timezone will be used for displaying the right time
 * **Country Code**: The country will be used for connecting to the WiFi
@@ -114,7 +116,7 @@ The following  settings can be customized through the admin web panel.
 
 * **WiFi Settings**: to make the device acting as an access point or connecting to an existing WiFi network
 * **Network Settings**: optional static IP address, DNS, gateway
-* **Allow remote Internet access**: if checked, the device will be recheable from the Internet. The service is provided by http://www.serveo.net
+* **Allow remote Internet access**: if checked, the device will be reachable from the Internet. The service is provided by http://www.serveo.net
 
 ## Camera Settings
 
@@ -135,10 +137,10 @@ Motion Detection:
 
 Image Analysis:
 
-* **Enable object detection**: If checked, upon a motion the image will be further analyzed with an artifical intelligence model to detect a specific object.
+* **Enable object detection**: If checked, upon a motion the image will be further analyzed with an artificial intelligence model to detect a specific object.
 * **Token**: The token for authenticating against the cloud service. Click on https://clarifai.com/developer/account/keys/create for generating a new token.
 * **Object**: The object that must be present in the image to trigger the motion/notification (e.g. people). Click on https://clarifai.com/demo for testing your image and check with objects are identified
-* **Threshold**: The probability threshold for the ojbect to trigger the notification (e.g. 0.9)	
+* **Threshold**: The probability threshold for the object to trigger the notification (e.g. 0.9)	
 * **False positives**: If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives (default: unchecked)
 
 ## Notification Settings
@@ -186,11 +188,11 @@ Periodically, through cron, PiWebcam.sh is called with the "*checkup*" parameter
 
 PiWebcam logs any activity in data filesystem so they survive a device reboot. Logs can be accessed and reviewed through the web interface as well.
 
-An **upgrade functionality** is provided through the web interface as well. A zip file is expected to be uploaded containing a PiWebcam directory and the files of the new version of the software under it (the same package used during the installation). During an upgrade, all the files are extracted into a temporary directory the the PiWebcam.sh script of the new version is run with the "*upgrade*" parameter so to execute the version-specific upgrade routine. A basic upgrade will just replace the files in /boot/PiWebcam with the new one and the same can be done even manually and install additional software if needed.
+An **upgrade functionality** is provided through the web interface as well. A zip file is expected to be uploaded containing a PiWebcam directory and the files of the new version of the software under it (the same package used during the installation). The device can also check for new updates, download and install them automatically. During an upgrade, all the files are extracted into a temporary directory the the PiWebcam.sh script of the new version is run with the "*upgrade*" parameter so to execute the version-specific upgrade routine. A basic upgrade will just replace the files in /boot/PiWebcam with the new one and the same can be done even manually and install additional software if needed.
 
-When building an outdoor webcam, you might want to add to your project an external IR led board and a mechanical IR Cut filter and PiWebcam can handle all of those on your behalf. Night mode manually or automatically and for the latter a pin of the board (21 BCM) is monitored for changes; when turning HIGH, night mode is entered, when turning LOW is left. Entering night mode means turning on the IR leds (if connected) by setting HIGH a pin (26), toggling the IR CUT filter by sending a pulse to a pin (16 for OFF, 20 for ON) and adjusting camera settings for a better representation of the night scene. Keep in mind the GPIO pins cannot drive directly the IR Cut filter or the IR Leds; you would need a H-Bridge or a transitor in between to provide adequate current.
+When building an outdoor webcam, you might want to add to your project an external IR led board and a mechanical IR Cut filter and PiWebcam can handle all of those on your behalf. Night mode manually or automatically and for the latter a pin of the board (21 BCM) is monitored for changes; when turning HIGH, night mode is entered, when turning LOW is left. Entering night mode means turning on the IR leds (if connected) by setting HIGH a pin (26), toggling the IR CUT filter by sending a pulse to a pin (16 for OFF, 20 for ON) and adjusting camera settings for a better representation of the night scene. Keep in mind the GPIO pins cannot drive directly the IR Cut filter or the IR Leds; you would need a H-Bridge or a transistor in between to provide adequate current.
 
-Upon installation, the system and web password as well as the Access Point passphrase are all set to the default device name. Always keep in mind in PiWebcam usability has been preferred over security in most of the cases (no HTTPS, passwords stored in log files, etc.) so consider futher protecting the device from a security standpoint.
+Upon installation, the system and web password as well as the Access Point passphrase are all set to the default device name. Always keep in mind in PiWebcam usability has been preferred over security in most of the cases (no HTTPS, passwords stored in log files, etc.) so consider further protecting the device from a security standpoint.
 
 ## API
 
@@ -199,7 +201,9 @@ Additionally, any setting exposed through the web interface, can also be set pro
 
 **Install PiWebcam (run manually by the user at the first installation only)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh install`
+```
+sudo /boot/PiWebcam/PiWebcam.sh install
+```
 
 * Enabling serial output
 * Enabling SSH
@@ -228,7 +232,9 @@ Additionally, any setting exposed through the web interface, can also be set pro
 
 **Configure the device for PiWebcam (run through /etc/rc.local at boot time)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh configure`
+```
+sudo /boot/PiWebcam/PiWebcam.sh configure
+```
 
 * Configuring to reboot on kernel panic
 * Customizing motd
@@ -249,22 +255,26 @@ Additionally, any setting exposed through the web interface, can also be set pro
 
 **Apply system settings configuration (run during startup and when changing system settings through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh configure_system`
+```
+sudo /boot/PiWebcam/PiWebcam.sh configure_system
+```
 
 * Configuring device name
 * Configuring system password
 * Configuring timezone
 * Configuring country code
 
-** Apply services configuration (run during startup)**
+**Apply services configuration (run during startup)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh configure_services`
+```
+sudo /boot/PiWebcam/PiWebcam.sh configure_services
+```
 
 * Configuring hostapd
     * Allow running as a daemon
 * Configuring dnsmasq
     * Offer DHCP services on the AP network 
-    * Resolv all hosts to redirect to the device
+    * Resolve all hosts to redirect to the device
 * Configuring lighttpd
     * Enable required modules
     * Configure h5ai to handle directory indexing (used by the "*Playback*" menu)
@@ -281,7 +291,9 @@ Additionally, any setting exposed through the web interface, can also be set pro
 
 **Apply network configuration (run during startup and when changing network settings through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh configure_network`
+```
+sudo /boot/PiWebcam/PiWebcam.sh configure_network
+```
 
 * If WiFi mode is set to Wireless client:
     * stop the AP services
@@ -301,70 +313,92 @@ Additionally, any setting exposed through the web interface, can also be set pro
 
 **Apply camera configuration (run during startup and when changing camera settings through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh configure_camera`
+```
+sudo /boot/PiWebcam/PiWebcam.sh configure_camera
+```
 
 * Set user's provided settings in motion configuration file
 * Restart the motion service
 
 **Apply notifications configuration (run during startup and when changing notification settings through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh configure_notifications`
+```
+sudo /boot/PiWebcam/PiWebcam.sh configure_notifications
+```
 
 * Configure SSMTP mail server 
 
 **Format the data partition (run when performing a Data Reset through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh data_reset`
+```
+sudo /boot/PiWebcam/PiWebcam.sh data_reset
+```
 
 * Format the data partition
 
 **Restore to factory defaults (run when performing a Factory Reset through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh factory_reset`
+```
+sudo /boot/PiWebcam/PiWebcam.sh factory_reset
+```
 
 * Delete the configuration file from */boot/PiWebcam/PiWebcam.conf*
 * Format the data partition
 
 **Reboot the device (run when performing a reboot through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh reboot`
+```
+sudo /boot/PiWebcam/PiWebcam.sh reboot
+```
 
 * Reboot the device
 
 **Show PiWebcam logs (run when accessing the logs through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh show_logs`
+```
+sudo /boot/PiWebcam/PiWebcam.sh show_logs
+```
 
 * Show the latest PiWebcam logs
 
 **Show the configuration file**
 
-`sudo /boot/PiWebcam/PiWebcam.sh show_config`
+```
+sudo /boot/PiWebcam/PiWebcam.sh show_config
+```
 
 * Read and return the configuration file */boot/PiWebcam/PiWebcam.conf*
 
 **Import configuration from file (run when importing a new configuration through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh import_config <file>`
+```
+sudo /boot/PiWebcam/PiWebcam.sh import_config <file>
+```
 
 * Copy the provided temporary file into */boot/PiWebcam/PiWebcam.conf*
 
-** Import firmware from file and execute upgrade routine (run when performing a System Update through the web panel)**
+**Import firmware from file and execute upgrade routine (run when performing a System Update through the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh import_firmware <PiWebcam.zip>`
+```
+sudo /boot/PiWebcam/PiWebcam.sh import_firmware <PiWebcam.zip>
+```
 
 * Unzip the content of the new firmware provided as argument
 * Executing upgrade routine on the extracted PiWebcam.sh file
 
-** Run the upgrade routine of the new firmware  (run by "import_firmware")**
+**Run the upgrade routine of the new firmware  (run by "import_firmware")**
 
-`sudo /boot/PiWebcam/PiWebcam.sh upgrade`
+```
+sudo /boot/PiWebcam/PiWebcam.sh upgrade
+```
 
 * Version-specific upgrade routine
 
-** Mount the root filesystem as read-write and chroot into it **
+**Mount the root filesystem as read-write and chroot into it**
 
-`sudo /boot/PiWebcam/PiWebcam.sh chroot [command]`
+```
+sudo /boot/PiWebcam/PiWebcam.sh chroot [command]
+```
 
 * remount root and boot filesystems as read-write
 * mount other virtual filesystems underneath the root filesystem
@@ -373,9 +407,11 @@ Additionally, any setting exposed through the web interface, can also be set pro
 * once exited, sync and umount virtual filesystems
 * remount the boot and root filesystem as read-only
 
-** Display status information (run when accessing the Status page of the web panel)  **
+**Display status information (run when accessing the Status page of the web panel)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh status`
+```
+sudo /boot/PiWebcam/PiWebcam.sh status
+```
 
 * display status information such as:
     * system uptime
@@ -389,9 +425,11 @@ Additionally, any setting exposed through the web interface, can also be set pro
     * WiFi Signal level
     * Motion/Access point services status
 
-** Notify about a motion (run by motion for "on_save" events)  **
+**Notify about a motion (run by motion for "on_save" events)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh motion <filename>`
+```
+sudo /boot/PiWebcam/PiWebcam.sh motion <filename>
+```
 
 * If an Internet connection is available:
 	* perform image analysis and object detection (if configured)
@@ -401,9 +439,11 @@ Additionally, any setting exposed through the web interface, can also be set pro
     * queue the notification to a text file in the data filesystem
     * if the notification queue is full, remove the oldest entry
 
-** Perform a periodic system checkup (run by cron)  **
+**Perform a periodic system checkup (run by cron)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh checkup`
+```
+sudo /boot/PiWebcam/PiWebcam.sh checkup
+```
 
 * reboot the device if the overlayed root filesystem is almost full (even if this shouldn't happen)
 * remove oldest files from the data directory when the data filesystem is almost full
@@ -411,23 +451,27 @@ Additionally, any setting exposed through the web interface, can also be set pro
 * Restart core services if no more running
 * if disconnected from Internet, try reconnecting to the network
 
-** Manually enable/disable night mode (run during startup if night mode is "ON" or "OFF" or, when "AUTO", by the "night_mode_service" process)**
+**Manually enable/disable night mode (run during startup if night mode is "ON" or "OFF" or, when "AUTO", by the "night_mode_service" process)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh night_mode <0|1>`
+```
+sudo /boot/PiWebcam/PiWebcam.sh night_mode <0|1>
+```
 
 * toggle the IR Cut filter by sending a pulse to its pins (if connected)
 * turns on/off the IR Leds (if connected)
 
-** Check the requested night mode through the value of a pin (run during startup as a background process)**
+**Check the requested night mode through the value of a pin (run during startup as a background process)**
 
-`sudo /boot/PiWebcam/PiWebcam.sh night_mode_service`
+```
+sudo /boot/PiWebcam/PiWebcam.sh night_mode_service
+```
 
 * start in day mode when controlling night mode
 * wait for a (change) interrupt on the night mode trigger pin
 * read and set the requested mode (LOW: day, HIGH: night)
 * continue the cycle
 
-** Save a configuration setting (run when the saving settings from the web panel. Require "configure_*" to apply the changes)  **
+**Save a configuration setting (run when the saving settings from the web panel. Require "configure_*" to apply the changes)**
 
 ```
 sudo /boot/PiWebcam/PiWebcam.sh set <setting> <value>
@@ -441,7 +485,7 @@ DEVICE_NAME | name of the device
 DEVICE_PASSWORD | password of the device
 DEVICE_TIMEZONE | timezone of the device
 DEVICE_COUNTRY_CODE | country code of the device
-DEVICE_LED | If uncheched both the red and the green leds on the board will be turned off (default: checked)
+DEVICE_LED | If unchecked both the red and the green leds on the board will be turned off (default: checked)
 WIFI_MODE | Connect to an existing WiFi network ("CLIENT") or act as an access point ("AP")
 WIFI_AP_PASSPHRASE | The passphrase to use when connecting to this access point
 WIFI_CLIENT_SSID | The name of the wireless network (SSID) to connect to
@@ -449,7 +493,7 @@ WIFI_CLIENT_PASSPHRASE | The passphrase to use to connect to the network
 NETWORK_IP | static IP address for this device
 NETWORK_GW | default gateway
 NETWORK_DNS | DNS server
-NETWORK_REMOTE_ACCESS | If set the device will be recheable from the Internet
+NETWORK_REMOTE_ACCESS | If set the device will be reachable from the Internet
 CAMERA_RESOLUTION | The resolution for picture/video
 CAMERA_ROTATE | Rotate image this number of degrees
 CAMERA_FRAMERATE | Maximum number of frames to be captured per second
@@ -462,7 +506,7 @@ MOTION_PROCESS_MOVIE | When a motion is detected, process (e.g. notify and analy
 AI_ENABLE | If checked, upon a motion the image will be further analyzed with an AI model to detect a specific object
 AI_TOKEN | The API key for authenticating against the AI service
 AI_OBJECT | The object that must be present in the image to trigger the notification
-AI_THRESHOLD | The probability threshold for the ojbect to trigger the notification
+AI_THRESHOLD | The probability threshold for the object to trigger the notification
 AI_KEEP_NOT_FOUND | If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives
 EMAIL_ENABLE | Enable email notifications
 EMAIL_TO | Set email recipients
@@ -519,9 +563,10 @@ Raspberry Camera Night Vision Wide Angle  | $13 | https://www.aliexpress.com/ite
 
 ## Changelog
 * v1.1:
-	* Added support for object detection and automatic image analysis through artifical intelligence models
+	* Added support for object detection and automatic image analysis through artificial intelligence models
 	* Added support for night vision and management of an IR Cut filter and IR Leds
 	* Added configurable camera framerate and motion event gap settings to the web interface
+	* Added functionality to check for updates, download and install them automatically
 	* Added option to disable (turn off) the power led of the board
 	* PiWebcam logs now accessible from the web interface
 	* Added option to notify the full movie instead of just the snapshot of the motion

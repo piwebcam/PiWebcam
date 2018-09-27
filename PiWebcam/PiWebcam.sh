@@ -23,20 +23,22 @@ fi
 
 # exported variables will be made available in the web interface inside $env
 export MY_NAME="PiWebcam"
-export MY_VERSION="1.1-dev"
 # location of this script
 export MY_DIR="/boot/$MY_NAME"
 export MY_FILE="$MY_DIR/$MY_NAME.sh"
+# version and build number
+export MY_VERSION="1.1"
+export MY_BUILD=`md5sum $MY_FILE 2>/dev/null |cut -f1 -d' '|tail -c 8`
+# URL of the project
+export MY_URL="https://sourceforge.net/projects/piwebcam"
 # location of the configuration file
 MY_CONFIG="$MY_DIR/$MY_NAME.conf"
-# boostrap style of the main panel of the web interface
+# bootstrap style of the main panel of the web interface
 export MY_WEB_PANEL_STYLE="primary"
-# where to store backup of previous versions during upgrade
-MY_BACKUP_DIR="$MY_DIR/backup"
 # the wlan interface
 IFACE="wlan0"
 # the default hostname and password
-export DEFAULT_NAME=${MY_NAME}-`cat /sys/class/net/$IFACE/address| sed 's/://g'|sed 's/^\w\w\w\w\w\w//'`
+export DEFAULT_NAME=${MY_NAME}-`cat /sys/class/net/$IFACE/address| sed 's/://g'|tail -c 7`
 export DEFAULT_PASSWORD="$DEFAULT_NAME"
 # the network which is created if WiFi AP mode is selected
 AP_NETWORK="192.168.4"
@@ -48,6 +50,8 @@ export DATA_DIR="$DATA_MOUNT_POINT/data"
 PERSIST_DIR="$DATA_MOUNT_POINT/$MY_NAME"
 # the directory through which pictures and movies are exposed inside the web root
 export PLAYBACK_DIR="playback"
+# where to store backup of previous versions during upgrade
+MY_BACKUP_DIR="$PERSIST_DIR/backup"
 # the size of the root filesystem
 ROOT_PARTITION_SIZE="4G"
 # location of the log file
@@ -77,7 +81,9 @@ WEB_PASSWD_FILE="/etc/lighttpd/$MY_NAME.users"
 ESCAPED_MY_FILE=`echo $MY_FILE|sed 's|/|\\\/|g'`
 ESCAPED_DATA_DIR=`echo $DATA_DIR|sed 's|/|\\\/|g'`
 # the file to create when night mode is enabled
-NIGHT_MODE_STATUS="/tmp/night_mode"
+NIGHT_MODE_STATUS_FILE="/tmp/night_mode"
+# the camera exposure to set when in night mode
+NIGHT_MODE_EXPOSURE=5000
 # The GPIO pin to monitor for entering/leaving night mode (BCM pin number)
 NIGHT_MODE_PIN=21
 # The GPIO pin attached to the "off" wire of the IR cut filter (BCM pin number)
@@ -131,12 +137,13 @@ source $MY_CONFIG 2> /dev/null
 
 # print out a banner
 function print_banner {
-base64 -d <<<"IF9fX19fXyBfIF8gICAgXyAgICAgIF8gICAgICAgICAgICAgICAgICAgICAgICAgCiB8IF9fXyAo
-XykgfCAgfCB8ICAgIHwgfCAgICAgICAgICAgICAgICAgICAgICAgIAogfCB8Xy8gL198IHwgIHwg
-fCBfX198IHxfXyAgIF9fXyBfXyBfIF8gX18gX19fICAKIHwgIF9fL3wgfCB8L1x8IHwvIF8gXCAn
-XyBcIC8gX18vIF9gIHwgJ18gYCBfIFwgCiB8IHwgICB8IFwgIC9cICAvICBfXy8gfF8pIHwgKF98
-IChffCB8IHwgfCB8IHwgfAogXF98ICAgfF98XC8gIFwvIFxfX198Xy5fXy8gXF9fX1xfXyxffF98
-IHxffCB8X3wKIAoK"
+base64 -d <<<"IF9fX19fXyBfIF8gICAgXyAgICAgIF8KIHwgX19fIChfKSB8ICB8IHwgICAgfCB8CiB8IHxfLyAv
+X3wgfCAgfCB8IF9fX3wgfF9fICAgX19fIF9fIF8gXyBfXyBfX18KIHwgIF9fL3wgfCB8L1x8IHwv
+IF8gXCAnXyBcIC8gX18vIF9gIHwgJ18gYCBfIFwKIHwgfCAgIHwgXCAgL1wgIC8gIF9fLyB8Xykg
+fCAoX3wgKF98IHwgfCB8IHwgfCB8CiBcX3wgICB8X3xcLyAgXC8gXF9fX3xfLl9fLyBcX19fXF9f
+LF98X3wgfF98IHxffAoK"
+	echo "Version $MY_VERSION (Build $MY_BUILD)"
+	echo
 }
 
 # log/echo a message ($1: message)
@@ -191,6 +198,21 @@ function stop_services {
 	systemctl stop hostapd
 	systemctl stop motion
 	systemctl stop lighttpd
+}
+
+# restart the camera service
+function restart_camera {
+	if [[ `night_mode_status` == "0" ]]; then
+		# adjust the settings and restart
+		v4l2-ctl --set-ctrl=exposure_dynamic_framerate=0 --set-ctrl=color_effects=0 --set-ctrl=auto_exposure=0 --set-ctrl=brightness=50 --set-ctrl=exposure_time_absolute=1000
+		/etc/init.d/motion restart
+	else
+		# adjust the settings and restart (for some reason exposure would apply only if set after restarting the service)
+		/etc/init.d/motion restart
+		sleep 1
+		v4l2-ctl --set-ctrl=exposure_time_absolute=1000
+		v4l2-ctl --set-ctrl=exposure_dynamic_framerate=1 --set-ctrl=color_effects=1 --set-ctrl=auto_exposure=1 --set-ctrl=brightness=55 --set-ctrl=exposure_time_absolute=$NIGHT_MODE_EXPOSURE
+	fi
 }
 
 # enable writing in the boot filesystem
@@ -248,6 +270,8 @@ fi
 
 function hard_reboot {
 	log "Rebooting the device"
+	# save the current clock
+	fake-hwclock save
 	# sync the filesystem
 	sync
 	# hard reboot to avoid getting blocked while stopping the services
@@ -330,7 +354,7 @@ function save_config {
 		CAMERA_FRAMERATE=5
 	fi
 	if [[ -z "$CAMERA_NIGHT_MODE" ]]; then
-		CAMERA_NIGHT_MODE="AUTO"
+		CAMERA_NIGHT_MODE="OFF"
 	fi
 	if [[ -z "$MOTION_RECORD_MOVIE" ]]; then
 		MOTION_RECORD_MOVIE=1
@@ -765,7 +789,7 @@ function installer {
 		### install dependencies
 		log "Installing dependencies"
 		apt-get update
-		apt-get -y install busybox dnsmasq hostapd f2fs-tools lighttpd motion php-fpm php-cgi php-gd zip sharutils ssmtp jq mpack autossh wiringpi
+		apt-get -y install busybox dnsmasq hostapd f2fs-tools lighttpd motion php-fpm php-cgi php-gd zip sharutils ssmtp jq mpack autossh wiringpi php-markdown
 		# stop and disable all the services
 		log "Disabling services"
 		stop_services
@@ -873,39 +897,45 @@ function gpio_pulse {
 	gpio -g write $1 0
 }
 
+# print out the current night mode status
+function night_mode_status {
+	if [[ -f "$NIGHT_MODE_STATUS_FILE.on" ]]; then
+		echo "1"
+	elif [[ -f "$NIGHT_MODE_STATUS_FILE.off" ]]; then
+		echo "0"
+	else 
+		echo "-1"
+	fi
+}
+if [ "$1" = "night_mode_status" ]; then
+	night_mode_status
+fi
+
 # set night mode to the requested value ($1: 0 off, 1 on, $2: force)
 function night_mode {
-	if [[ "$1" == "1" ]] && [[ ! -f "$NIGHT_MODE_STATUS" || "$2" == "force" ]]; then
+	if [[ "$1" == "1" ]] && [[ `night_mode_status` != "1" || "$2" == "force" ]]; then
 		log "Entering night mode"
 		# send a short pulse to the "on" pin of the IR cut filter
 		gpio_pulse $IR_FILTER_ON_PIN
 		# turn on IR Leds
 		gpio -g write $IR_LED_PIN 1
-		# adjust camera settings
-		v4l2-ctl --set-ctrl=exposure_dynamic_framerate=1 --set-ctrl=auto_exposure_bias=24 --set-ctrl=color_effects=1
-		/etc/init.d/motion restart
 		# update status
-		echo `date +%s` > $NIGHT_MODE_STATUS
+		rm -f $NIGHT_MODE_STATUS_FILE.off
+		echo `date +%s` > $NIGHT_MODE_STATUS_FILE.on
+		# restart the camera
+		restart_camera
 	fi
-	if [[ "$1" == "0" ]] && [[ -f "$NIGHT_MODE_STATUS" || "$2" == "force" ]]; then
+	if [[ "$1" == "0" ]] && [[ `night_mode_status` != "0" || "$2" == "force" ]]; then
 		log "Leaving night mode"
 		# send a short pulse to the "off" pin of the IR cut filter
 		gpio_pulse $IR_FILTER_OFF_PIN
 		# turn off IR Leds
 		gpio -g write $IR_LED_PIN 0
-		# adjust camera settings
-		v4l2-ctl --set-ctrl=exposure_dynamic_framerate=0 --set-ctrl=auto_exposure_bias=12 --set-ctrl=color_effects=0
-		/etc/init.d/motion restart
 		# update status
-		rm -f $NIGHT_MODE_STATUS
-	fi
-	if [[ -z "$1" ]]; then
-		# when no parameters are provided, print put the current night mode status
-		if [[ -f "$NIGHT_MODE_STATUS" ]]; then
-			echo "1"
-		else
-			echo "0"
-		fi
+		rm -f $NIGHT_MODE_STATUS_FILE.on
+		echo `date +%s` > $NIGHT_MODE_STATUS_FILE.off
+		# restart the camera
+		restart_camera
 	fi
 }
 if [ "$1" = "night_mode" ]; then
@@ -922,11 +952,6 @@ if [ "$1" = "night_mode_service" ]; then
 		log "Night mode process already running, exiting"
 		exit
 	fi
-	if [[ $CAMERA_NIGHT_MODE == "AUTO" ]]; then
-		# start in day mode when controlling night mode
-		night_mode 0
-	fi
-	log "Monitoring night mode trigger pin $NIGHT_MODE_PIN..."
 	while true; do
 		# wait for a (change) interrupt on the night mode trigger pin
 		gpio -g wfi $NIGHT_MODE_PIN both
@@ -1057,8 +1082,8 @@ function configure_services {
 	sed -i -E 's/^locate_motion_mode .+/locate_motion_mode preview/' $CAMERA_CONFIG
 	sed -i -E "s/^target_dir .+/target_dir $ESCAPED_DATA_DIR/" $CAMERA_CONFIG
 	sed -i -E 's/^snapshot_filename .+/snapshot_filename .snapshots\/%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
-	sed -i -E 's/^picture_filename .+/picture_filename year_%Y\/month_%m\/day_%d\/hour_%H\/%v-%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
-	sed -i -E 's/^movie_filename .+/movie_filename year_%Y\/month_%m\/day_%d\/hour_%H\/video\/%v-%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
+	sed -i -E 's/^picture_filename .+/picture_filename year_%Y\/month_%m\/day_%d\/hour_%H\/%v-%Y_%m_%d_%H%M_%S/' $CAMERA_CONFIG
+	sed -i -E 's/^movie_filename .+/movie_filename year_%Y\/month_%m\/day_%d\/hour_%H\/video\/%v-%Y_%m_%d_%H%M_%S/' $CAMERA_CONFIG
 	# allow motion user to run this script as root
 	echo "motion ALL=(ALL) NOPASSWD:$MY_FILE" > /etc/sudoers.d/${MY_NAME}_motion
 		
@@ -1222,18 +1247,18 @@ function configure_camera {
 	fi
 	# set motion process movie
 	if [[ $MOTION_PROCESS_MOVIE == 1 ]]; then
-		log "Set to process motion event movies"
+		log "Setting to process motion event movies"
 		sed -i -E "s/^; on_movie_end .+/on_movie_end sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
 	else
-		log "Set to process motion event pictures"
+		log "Setting to process motion event pictures"
 		sed -i -E "s/^; on_picture_save .+/on_picture_save sudo $ESCAPED_MY_FILE motion %f/" $CAMERA_CONFIG
 	fi
 	
 	# restart motion
 	log "Restarting camera"
-	/etc/init.d/motion restart
+	restart_camera
 	
-	# set night mode
+	# set night mode (in case the user has changed it)
 	if [[ $CAMERA_NIGHT_MODE == "ON" ]]; then
 		night_mode 1
 	fi
@@ -1276,8 +1301,16 @@ function configure_admin_panel {
 
 # CLI
 if [ "$1" = "configure" ]; then
+	# adjust system clock
+	if [[ ! -f $PERSIST_DIR/fake-hwclock.data ]]; then
+		cp /etc/fake-hwclock.data $PERSIST_DIR
+	fi
+	rm -f /etc/fake-hwclock.data
+	ln -s $PERSIST_DIR/fake-hwclock.data /etc/fake-hwclock.data
+	fake-hwclock load
+	
 	log "-----"
-	log "Configuring this device for $MY_NAME v$MY_VERSION"
+	log "Configuring this device for $MY_NAME (v$MY_VERSION - Build $MY_BUILD)"
 	
 	# adjust system settings
 	log "Configuring bash"
@@ -1288,12 +1321,7 @@ if [ "$1" = "configure" ]; then
 	sysctl -w kernel.panic_on_oops=1
 	
 	log "Customizing motd"
-	base64 -d <<<"IF9fX19fXyBfIF8gICAgXyAgICAgIF8gICAgICAgICAgICAgICAgICAgICAgICAgCiB8IF9fXyAo
-XykgfCAgfCB8ICAgIHwgfCAgICAgICAgICAgICAgICAgICAgICAgIAogfCB8Xy8gL198IHwgIHwg
-fCBfX198IHxfXyAgIF9fXyBfXyBfIF8gX18gX19fICAKIHwgIF9fL3wgfCB8L1x8IHwvIF8gXCAn
-XyBcIC8gX18vIF9gIHwgJ18gYCBfIFwgCiB8IHwgICB8IFwgIC9cICAvICBfXy8gfF8pIHwgKF98
-IChffCB8IHwgfCB8IHwgfAogXF98ICAgfF98XC8gIFwvIFxfX198Xy5fXy8gXF9fX1xfXyxffF98
-IHxffCB8X3wKIAoK" > /etc/motd
+	print_banner > /etc/motd
 	
 	log "Disabling under-voltage warnings"
 	sed -i '1s/^/:msg, contains, \"oltage\" stop\n/' /etc/rsyslog.conf
@@ -1318,15 +1346,18 @@ IHxffCB8X3wKIAoK" > /etc/motd
 	
 	log "Disabling Power Management on WiFi interface"
 	iw dev $IFACE set power_save off
-	if [ ! -f $MY_CONFIG ]; then
+	
+	if [[ ! -f $MY_CONFIG || -z "$DEVICE_NAME" ]]; then
 		log "Generating empty configuration file"
 		save_config
 	fi
+	
 	if [ ! -d $DATA_DIR ]; then
 		log "Creating data directory $DATA_DIR"
 		mkdir -p $DATA_DIR
 		chown motion.motion $DATA_DIR
 	fi
+	
 	if [ ! -d $PERSIST_DIR ]; then
 		mkdir -p $PERSIST_DIR
 	fi
@@ -1434,14 +1465,20 @@ fi
 # Upgrade
 #################
 
-# import firmware from file and execute upgrade routine ($1: new firmware path)
+# import firmware from file/url and execute upgrade routine ($1: new firmware path or url)
 function import_firmware {
 	if [[ -n "$1" ]]; then
-		log "Importing new firmware from $1"
+		INPUT=$1
+		log "Importing new firmware from $INPUT"
+		if [[ $INPUT == http* ]]; then
+			# if the input is a url, download it first
+			wget -O /tmp/upgrade.zip $INPUT 2>/dev/null
+			INPUT="/tmp/upgrade.zip"
+		fi
 		# unzip the content of the new firmware
 		local DIR=`mktemp -d`
 		cd $DIR
-		unzip "$1" -d $DIR > /dev/null
+		unzip "$INPUT" -d $DIR > /dev/null
 		# run the upgrade routing
 		local FILE=$DIR/$MY_NAME/$MY_NAME.sh
 		log "Executing upgrade routine on file $FILE"
@@ -1455,7 +1492,7 @@ function import_firmware {
 	fi
 }
 if [ "$1" = "import_firmware" ]; then
-	import_firmware $2
+	import_firmware "$2"
 fi
 
 # run the upgrade routine ($1: version we are upgrading from)
@@ -1466,9 +1503,9 @@ function upgrade {
 			sleep 5
 			
 			# install dependencies
-			if [[ ! -x "/usr/bin/jq" || ! -x "/usr/bin/gpio" ]]; then
+			if [[ ! -x "/usr/bin/jq" || ! -x "/usr/bin/gpio" || ! -d "/usr/share/php/Michelf"  ]]; then
 				log "Installing dependencies"
-				chroot_lower "apt-get update; apt-get -y install jq wiringpi"
+				chroot_lower "apt-get update; apt-get -y install jq wiringpi php-markdown"
 			fi
 			
 			# update the system configuration
@@ -1493,10 +1530,11 @@ function upgrade {
 			log "Backing up current version in $BACKUP_FILE"
 			mkdir -p $MY_BACKUP_DIR
 			rm -f $BACKUP_FILE
-			zip -mr $BACKUP_FILE $MY_DIR -x "${MY_BACKUP_DIR}*"
+			zip -mr $BACKUP_FILE $MY_DIR
 			
 			# copy in the new files
 			log "Copying new files"
+			mkdir -p $MY_DIR
 			cp -R $MY_NAME/* $MY_DIR
 			
 			# upgrade the configuration file
@@ -1563,10 +1601,8 @@ if [ "$1" = "downgrade" ]; then
 	if [[ -n "$2" && -d "$MY_BACKUP_DIR" ]]; then
 		BACKUP_FILE="$MY_BACKUP_DIR/${MY_NAME}_v$2.zip"
 		enable_write_boot
-		# clean up our directory
-		mv $MY_DIR/backup /tmp
-		rm -rf $MY_DIR/*
-		mv /tmp/backup $MY_DIR/backup 
+		# remove our directory
+		rm -rf $MY_DIR
 		# restore backup
 		log "Downgrading to v$2 from $BACKUP_FILE"
 		unzip $BACKUP_FILE -d /
@@ -1584,31 +1620,46 @@ fi
 
 # display status information
 if [ "$1" = "status" ]; then
+	NETWORK_INTERNET=$(eval $INTERNET)
 	echo "SYSTEM_UPTIME="`uptime |sed -E 's/^.+up (.+),\s\s\w user.+$/\1/'`
 	echo "SYSTEM_CPU="`grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage }'|cut -d '.' -f1`
 	echo "SYSTEM_TEMP="`vcgencmd measure_temp|cut -d '=' -f2|cut -d '.' -f1`
 	echo "SERVICE_MOTION="`ps uax|grep /usr/bin/motion|grep -v grep|wc -l`
 	echo "SERVICE_AP="`ps uax|grep /usr/sbin/hostapd|grep -v grep|wc -l`
 	echo "NETWORK_IP="`hostname -I 2>/dev/null |cut -d' ' -f1`
-	echo "NETWORK_INTERNET="$(eval $INTERNET)
+	echo "NETWORK_MAC="`cat /sys/class/net/$IFACE/address`
+	echo "NETWORK_INTERNET=$NETWORK_INTERNET"
 	if iwconfig $IFACE|grep -q "Mode:Master"; then
 		echo "WIFI_SSID="`cat $AP_CONFIG |grep ^ssid|cut -d "=" -f2`
 		echo "WIFI_LINK_QUALITY=100"
+		echo "WIFI_AP_MAC="`cat /sys/class/net/$IFACE/address`
 	else
 		if iwconfig $IFACE|grep -q "ESSID:off/any"; then
 			echo "WIFI_SSID=None"
 			echo "WIFI_LINK_QUALITY=0"
+			echo "WIFI_AP_MAC=-"
 		else
 			echo "WIFI_SSID="`iwconfig $IFACE | grep ESSID | cut -d '"' -f 2`
 			S1=`iwconfig $IFACE | awk '{if ($1=="Link"){split($2,A,"/");print A[1]}}'|sed 's/Quality=//g'`
 			S2=`iwconfig $IFACE | awk '{if ($1=="Link"){split($2,A,"/");print A[2]}}'`
 			echo "WIFI_LINK_QUALITY="$(($S1*100/$S2))
 			echo "WIFI_SIGNAL_LEVEL="`iwconfig $IFACE | awk '{if ($3=="Signal"){split($4,A,"=");print A[2]}}'`
+			echo "WIFI_AP_MAC="`iwconfig $IFACE | awk '{if ($4=="Access"){print $6}}'`
 		fi
 	fi
 	echo "DISK_ROM="`df |grep '/overlay/lower$'|awk '{print $5}'|sed 's/%//'`
 	echo "DISK_CACHE="`df |grep '/$'|awk '{print $5}'|sed 's/%//'`
 	echo "DISK_DATA="`df |grep "$DATA_MOUNT_POINT"|awk '{print $5}'|sed 's/%//'`
+	if [[ $NETWORK_INTERNET == "1" ]]; then
+		RSS=`curl $MY_URL/rss?path=/ 2>/dev/null`
+		ITEM=`echo $RSS| grep -Po '<item>.+<item>'`
+		LAST_VERSION=`echo $ITEM| sed -E 's/.*<title><!\[CDATA\[\/v([^\/]+).*$/\1/'`
+		LAST_VERSION_PUBLISHED=`echo $ITEM| sed -E 's/^.*<pubDate>([^>]+)<\/pubDate>.+$/\1/'`
+		LAST_VERSION_LINK=`echo $ITEM| sed -E 's/^.*<link>([^>]+)<\/link>.+$/\1/'`
+	fi
+	echo "LAST_VERSION=$LAST_VERSION"
+	echo "LAST_VERSION_PUBLISHED=$LAST_VERSION_PUBLISHED"
+	echo "LAST_VERSION_LINK=$LAST_VERSION_LINK"
 fi
 
 #################
@@ -1662,15 +1713,19 @@ FILEIN
 							# remove both the picture and the video of the recorded motion
 							rm -f $DIR_NAME/${EVENT_NUMBER}-*
 							rm -f $DIR_NAME/video/${EVENT_NUMBER}-*
+							# remove the directory if empty
 							rmdir $DIR_NAME/video 2>/dev/null
 							rmdir $DIR_NAME 2>/dev/null
 						else
 							# keep the file but move them into a different location
-							DELETED_DIR="$DIR_NAME/deleted"
-							mkdir -p $DELETED_DIR
-							mkdir -p $DELETED_DIR/video
-							mv $DIR_NAME/${EVENT_NUMBER}-* $DELETED_DIR
-							mv $DIR_NAME/video/${EVENT_NUMBER}-* $DELETED_DIR/video
+							DISCARDED_DIR=`dirname $DIR_NAME`"/_discarded"
+							mkdir -p $DISCARDED_DIR
+							mkdir -p $DISCARDED_DIR/video
+							mv $DIR_NAME/${EVENT_NUMBER}-* $DISCARDED_DIR
+							mv $DIR_NAME/video/${EVENT_NUMBER}-* $DISCARDED_DIR/video
+							# remove the directory if empty
+							rmdir $DIR_NAME/video 2>/dev/null
+							rmdir $DIR_NAME 2>/dev/null
 						fi
 					fi
 				else
@@ -1742,8 +1797,8 @@ if [ "$1" = "checkup" ]; then
 
 	### ensure the core services are running
 	if ! pgrep -x "motion" > /dev/null; then
-		log "Restarting motion service"
-		/etc/init.d/motion restart
+		log "Restarting camera service"
+		restart_camera
 	fi
 	if ! pgrep -x "lighttpd" > /dev/null; then
 		log "Restarting lighttpd service"
@@ -1792,21 +1847,22 @@ if [ "$1" = "checkup" ]; then
 	
 	# fix night mode
 	if [[ $CAMERA_NIGHT_MODE == "AUTO" ]]; then
-		log "Fixing night mode"
 		REQUESTED_NIGHT_MODE=$(gpio -g read $NIGHT_MODE_PIN)
-		if [[ $REQUESTED_NIGHT_MODE == "1" && ! -f "$NIGHT_MODE_STATUS" ]]; then
+		if [[ $REQUESTED_NIGHT_MODE == "1" && `night_mode_status` != "1" ]]; then
+			log "Night mode should be on while seems to be off, fixing it"
 			night_mode 1
 		fi
-		if [[ $REQUESTED_NIGHT_MODE == "0" && -f "$NIGHT_MODE_STATUS" ]]; then
+		if [[ $REQUESTED_NIGHT_MODE == "0" && `night_mode_status` != "0" ]]; then
+			log "Night mode should be off while seems to be on, fixing it"
 			night_mode 0
 		fi
 	fi
-	if [[ $CAMERA_NIGHT_MODE == "ON" && ! -f "$NIGHT_MODE_STATUS" ]]; then
-		log "Fixing night mode"
+	if [[ $CAMERA_NIGHT_MODE == "ON" && `night_mode_status` != "1" ]]; then
+		log "Night mode should be on while seems to be off, fixing it"
 		night_mode 1
 	fi
-	if [[ $CAMERA_NIGHT_MODE == "OFF" && -f "$NIGHT_MODE_STATUS" ]]; then
-		log "Fixing night mode"
+	if [[ $CAMERA_NIGHT_MODE == "OFF" && `night_mode_status` != "0" ]]; then
+		log "Night mode should be off while seems to be on, fixing it"
 		night_mode 0
 	fi
 fi

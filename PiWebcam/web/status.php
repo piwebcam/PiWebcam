@@ -2,6 +2,20 @@
 	include "header.php";
 	// retrieve status information
 	parse_text(run("status"),$status);
+
+	// form submitted
+	if(count($_REQUEST) > 0) {
+		if ($_REQUEST["action"] === "upgrade_from_url") {
+			$url = urldecode($_REQUEST["url"]);
+			// import the firmware
+			run("import_firmware '".$url."'");
+			array_push($message["warning"],"The upgrade in progress, the device will reboot once finished.");
+		}
+	}
+	
+	// generate the modals
+	generate_modal("modal","The update will be downloaded and automatically installed.<br><br>The system will reboot to complete the process and install the update.<br>Please allow 3-5 minutes before reconnecting.","button","form");
+	
 	include "messages.php";
 ?>
             <div class="row">
@@ -76,6 +90,9 @@
 													<dt>WiFI Network</dt>
 													<dd><?php print $status["WIFI_SSID"] ?></dd>
 													
+													<dt>WiFI AP MAC Address</dt>
+													<dd><?php print $status["WIFI_AP_MAC"] ?></dd>
+													
 													<dt>WiFI Signal</dt>
 													<dd>
 														<div class="progress">
@@ -89,6 +106,9 @@
 													
 													<dt>IP Address</dt>
 													<dd><?php print $status["NETWORK_IP"] ?></dd>
+													
+													<dt>MAC Address</dt>
+													<dd><?php print strtoupper($status["NETWORK_MAC"]) ?></dd>
 													
 													<dt>Internet Connectivity</dt>
 													<dd>
@@ -107,6 +127,40 @@
 															if($status["SERVICE_AP"] === "1") print 'success">Running';
 															else print 'warning">Not Running';
 															print '</p>';
+														?>
+													</dd>
+												</dl>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-lg-12">
+										<div class="panel panel-default">
+											<div class="panel-body">
+												<h3>PiWebcam</h3>
+												<dl class="dl-horizontal">
+													<dt>Version</dt>
+													<dd>v<?php print $env["MY_VERSION"] ?> (Build <?php print $env["MY_BUILD"] ?>)</dd>
+													<dt>Updates</dt>
+													<dd>
+														<?php
+															if ($status["LAST_VERSION"] == "") {
+																print "Unable to check for updates";
+															}
+															else if (floatval($status["LAST_VERSION"]) > floatval($env["MY_VERSION"])) {
+																print 'v'.$status["LAST_VERSION"].' - published on '.$status["LAST_VERSION_PUBLISHED"];
+																print '<br><br>';
+																print '<form id="form" method="POST" role="form">';
+																print '<input type="hidden" name="action" value="upgrade_from_url">';
+																print '<input type="hidden" name="url" value="'.urlencode ($status["LAST_VERSION_LINK"]).'">';
+																print '<button id="button" type="submit" class="btn btn-primary" onclick=\'$("#button").addClass("disabled"); $("#modal").modal("show");return false;\'>';
+																print '<i class="fa fa-download"></i> Download & Install<br>';
+																print '</button>';
+																print '<form>';
+															} else {
+																print "You are already running the latest version";
+															}
 														?>
 													</dd>
 												</dl>
