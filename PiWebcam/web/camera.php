@@ -54,7 +54,7 @@
 												<div class="form-group">
 													<label>Framerate</label>
 													<input name="CAMERA_FRAMERATE" class="form-control" value="<?php print $config["CAMERA_FRAMERATE"]; ?>">
-													<p class="help-block">Maximum number of frames to be captured per second (<i>default: 5</i>)</p>
+													<p class="help-block">Maximum number of frames to be captured per second (<i>default: 2</i>)</p>
 												</div>
 												<div class="form-group">
 													<label>Night Mode</label>

@@ -43,7 +43,7 @@
 												<div id="ap_panel" class="<?php if ($config["WIFI_MODE"] === "CLIENT") print " hidden"?>">
 												<div class="form-group">
 													<label>Access Point Passphrase</label>
-													<input name="WIFI_AP_PASSPHRASE" type="password" class="form-control" value="<?php print $config["WIFI_AP_PASSPHRASE"]?>">
+													<input name="WIFI_AP_PASSPHRASE" type="password" class="form-control" value="<?php print $config["WIFI_AP_PASSPHRASE"]?>" pattern=".{0}|.{8,}" required>
 													<p class="help-block">The passphrase to use when connecting to this access point (minimum 8 characters). Leave it empty for no password</p>
 												</div>
 												</div>

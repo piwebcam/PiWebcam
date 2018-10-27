@@ -124,7 +124,7 @@ Camera:
 
 * **Resolution**: Select the resolution for picture/video (default: 640x480)
 * **Rotate**: Rotate image this number of degrees (default: 0)
-* **Framerate**: Maximum number of frames to be captured per second (default: 5)
+* **Framerate**: Maximum number of frames to be captured per second (default: 2)
 * **Night Mode**: Enter night mode manually or automatically (when the value of a pin changes)
 
 Motion Detection: 
@@ -562,6 +562,13 @@ Raspberry Camera Night Vision Wide Angle  | $13 | https://www.aliexpress.com/ite
 * Instructables: https://www.instructables.com/id/Fully-featured-Outdoor-Security-Camera-Based-on-Ra/
 
 ## Changelog
+* v1.1.1:
+	* Fixed a bug preventing notifications from being sent
+	* Fixed a bug preventing logs from being generated
+	* Fixed a bug causing the AP to result unreachable after a passphrase change
+	* The device now reboots after importing a new configuration
+	* Improved image quality and motion detection when switching between day and night
+	* Default framerate set to 2 to limit CPU utilization
 * v1.1:
 	* Added support for object detection and automatic image analysis through artificial intelligence models
 	* Added support for night vision and management of an IR Cut filter and IR Leds

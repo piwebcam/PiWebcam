@@ -27,7 +27,7 @@ export MY_NAME="PiWebcam"
 export MY_DIR="/boot/$MY_NAME"
 export MY_FILE="$MY_DIR/$MY_NAME.sh"
 # version and build number
-export MY_VERSION="1.1"
+export MY_VERSION="1.1.1"
 export MY_BUILD=`md5sum $MY_FILE 2>/dev/null |cut -f1 -d' '|tail -c 8`
 # URL of the project
 export MY_URL="https://sourceforge.net/projects/piwebcam"
@@ -205,6 +205,7 @@ function restart_camera {
 	if [[ `night_mode_status` == "0" ]]; then
 		# adjust the settings and restart
 		v4l2-ctl --set-ctrl=exposure_dynamic_framerate=0 --set-ctrl=color_effects=0 --set-ctrl=auto_exposure=0 --set-ctrl=brightness=50 --set-ctrl=exposure_time_absolute=1000
+		sleep 1
 		/etc/init.d/motion restart
 	else
 		# adjust the settings and restart (for some reason exposure would apply only if set after restarting the service)
@@ -351,7 +352,7 @@ function save_config {
 		CAMERA_ROTATE=0
 	fi
 	if [[ -z "$CAMERA_FRAMERATE" ]]; then
-		CAMERA_FRAMERATE=5
+		CAMERA_FRAMERATE=2
 	fi
 	if [[ -z "$CAMERA_NIGHT_MODE" ]]; then
 		CAMERA_NIGHT_MODE="OFF"
@@ -424,7 +425,7 @@ NETWORK_REMOTE_ACCESS='$NETWORK_REMOTE_ACCESS'
 CAMERA_RESOLUTION='$CAMERA_RESOLUTION'
 # Rotate image this number of degrees (default: 0)
 CAMERA_ROTATE='$CAMERA_ROTATE'
-# Maximum number of frames to be captured per second (default: 5)
+# Maximum number of frames to be captured per second (default: 2)
 CAMERA_FRAMERATE='$CAMERA_FRAMERATE'
 # Adjust the camera settings and the IR LEDs and Cut filter (if connected) for night vision. It can be ON (always night), OFF (always day) or AUTO (enter night mode when the value of a pin changes)
 CAMERA_NIGHT_MODE='$CAMERA_NIGHT_MODE'
@@ -496,9 +497,11 @@ if [ "$1" = "import_config" ]; then
 	if [[ -n "$2" ]]; then
 		enable_write_boot
 		log "Importing configuration file $2"
-		# just overwrite the configuration file
+		# overwrite the configuration file
 		cp -f $2 $MY_CONFIG
 		disable_write_boot
+		# reboot
+		hard_reboot
 	fi
 fi
 
@@ -770,6 +773,8 @@ function installer {
 			exit
 		fi
 	fi
+	# installation logs will be stored in /var/log
+	MY_LOG_FILE=/var/log/$MY_NAME.log
 	if ! grep  -q "$MY_FILE" $STARTUP_FILE; then
 		log "Installing $MY_NAME v$MY_VERSION"
 		enable_write_boot
@@ -1077,13 +1082,14 @@ function configure_services {
 	sed -i -E 's/^locate_motion_mode .+/locate_motion_mode on/' $CAMERA_CONFIG
 	sed -i -E 's/^locate_motion_style .+/locate_motion_style redbox/' $CAMERA_CONFIG
 	sed -i -E 's/^text_changes .+/text_changes on/' $CAMERA_CONFIG
+	sed -i -E "s/^lightswitch .+/lightswitch 80/" $CAMERA_CONFIG
 	sed -i -E 's/^text_double .+/text_double on/' $CAMERA_CONFIG
 	sed -i -E 's/^output_pictures .+/output_pictures best/' $CAMERA_CONFIG
 	sed -i -E 's/^locate_motion_mode .+/locate_motion_mode preview/' $CAMERA_CONFIG
 	sed -i -E "s/^target_dir .+/target_dir $ESCAPED_DATA_DIR/" $CAMERA_CONFIG
 	sed -i -E 's/^snapshot_filename .+/snapshot_filename .snapshots\/%Y_%m_%d_%H%M%S/' $CAMERA_CONFIG
-	sed -i -E 's/^picture_filename .+/picture_filename year_%Y\/month_%m\/day_%d\/hour_%H\/%v-%Y_%m_%d_%H%M_%S/' $CAMERA_CONFIG
-	sed -i -E 's/^movie_filename .+/movie_filename year_%Y\/month_%m\/day_%d\/hour_%H\/video\/%v-%Y_%m_%d_%H%M_%S/' $CAMERA_CONFIG
+	sed -i -E 's/^picture_filename .+/picture_filename year_%Y\/month_%m\/day_%d\/hour_%H\/%Y_%m_%d_%H%M_%v/' $CAMERA_CONFIG
+	sed -i -E 's/^movie_filename .+/movie_filename year_%Y\/month_%m\/day_%d\/hour_%H\/video\/%Y_%m_%d_%H%M_%v/' $CAMERA_CONFIG
 	# allow motion user to run this script as root
 	echo "motion ALL=(ALL) NOPASSWD:$MY_FILE" > /etc/sudoers.d/${MY_NAME}_motion
 		
@@ -1097,6 +1103,7 @@ function configure_services {
 	CRON_JOB="/etc/cron.d/$MY_NAME"
 	echo "MAILTO=\"\"" > $CRON_JOB
 	echo "*/30 * * * * root $MY_FILE checkup 2>&1 >/dev/null" >> $CRON_JOB
+	echo "5 */2 * * * root $MY_FILE configure_camera 2>&1 >/dev/null" >> $CRON_JOB
 }
 
 # configure remote internet access through serveo.net
@@ -1178,8 +1185,11 @@ function configure_network {
 		# enable and start the services
 		systemctl enable hostapd
 		systemctl enable dnsmasq
-		systemctl restart hostapd
-		systemctl restart dnsmasq
+		systemctl stop hostapd
+		systemctl stop dnsmasq
+		sleep 2
+		systemctl start hostapd
+		systemctl start dnsmasq
 		# intercept all the traffic and redirect it here
 		iptables -t nat -F
 		iptables -t nat -A PREROUTING -d 0/0 -p tcp --dport 80 -j DNAT --to-destination $AP_NETWORK.1:80
@@ -1301,7 +1311,12 @@ function configure_admin_panel {
 
 # CLI
 if [ "$1" = "configure" ]; then
-	# adjust system clock
+	# create persist directory if not already there
+	if [ ! -d $PERSIST_DIR ]; then
+		mkdir -p $PERSIST_DIR
+	fi
+	
+	# adjust system clock (do not log until the time is more or less accurate)
 	if [[ ! -f $PERSIST_DIR/fake-hwclock.data ]]; then
 		cp /etc/fake-hwclock.data $PERSIST_DIR
 	fi
@@ -1356,10 +1371,6 @@ if [ "$1" = "configure" ]; then
 		log "Creating data directory $DATA_DIR"
 		mkdir -p $DATA_DIR
 		chown motion.motion $DATA_DIR
-	fi
-	
-	if [ ! -d $PERSIST_DIR ]; then
-		mkdir -p $PERSIST_DIR
 	fi
 	
 	log "Configuring GPIO"
@@ -1499,6 +1510,12 @@ fi
 function upgrade {
 	if [[ -n "$1" ]]; then
 		if [[ $(eval $INTERNET) = "1" ]]; then
+			# Fix bug #59 - Logs are not generated
+			if [[ -f "$PERSIST_DIR" ]]; then
+				rm -f $PERSIST_DIR
+				mkdir -p $PERSIST_DIR
+			fi
+		
 			log "Upgrading from v$1 to v$MY_VERSION"
 			sleep 5
 			
@@ -1508,7 +1525,7 @@ function upgrade {
 				chroot_lower "apt-get update; apt-get -y install jq wiringpi php-markdown"
 			fi
 			
-			# update the system configuration
+			# update system configuration
 			if systemctl status apt-daily.service|grep -q ExecStart; then
 				# the apt daily service slow down the device at boot and consumes a lot of CPU
 				log "Disable apt daily service"
@@ -1735,12 +1752,12 @@ FILEIN
 			# notify the user
 			if [[ "$EMAIL_ENABLE" = "1" || "$SLACK_ENABLE" = "1" ]]; then
 				log "Notifying about $FILENAME"
-				if [ "$EMAIL_ENABLE" = "1" && "$NOTIFY" = 1 ]; then
+				if [[ "$EMAIL_ENABLE" = "1" && "$NOTIFY" = "1" ]]; then
 					# send email notification
 					log "Sending email to $EMAIL_TO"
 					mpack -s "[$DEVICE_NAME] $NOTIFICATION_SUBJECT" "$FILENAME" "$EMAIL_TO"
 				fi
-				if [ "$SLACK_ENABLE" = "1" && "$NOTIFY" = 1 ]; then
+				if [[ "$SLACK_ENABLE" = "1" && "$NOTIFY" = "1" ]]; then
 					# send slack notification
 					log "Sending slack notification to channel $SLACK_CHANNEL"
 					curl -F file=@$FILENAME -F channels=$SLACK_CHANNEL -F token=$SLACK_TOKEN initial_comment="[$DEVICE_NAME] $NOTIFICATION_SUBJECT" https://slack.com/api/files.upload

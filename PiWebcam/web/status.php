@@ -1,7 +1,13 @@
 <?php 
 	include "header.php";
 	// retrieve status information
-	parse_text(run("status"),$status);
+	$status_raw = run("status");
+	if (array_key_exists("no_headers",$_REQUEST)) {
+		// just print out the raw status
+		print $status_raw;
+		exit();
+	}
+	parse_text($status_raw,$status);
 
 	// form submitted
 	if(count($_REQUEST) > 0) {
