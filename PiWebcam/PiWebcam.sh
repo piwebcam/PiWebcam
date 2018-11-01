@@ -27,10 +27,12 @@ export MY_NAME="PiWebcam"
 export MY_DIR="/boot/$MY_NAME"
 export MY_FILE="$MY_DIR/$MY_NAME.sh"
 # version and build number
-export MY_VERSION="1.1.1"
+export MY_VERSION="1.2"
 export MY_BUILD=`md5sum $MY_FILE 2>/dev/null |cut -f1 -d' '|tail -c 8`
 # URL of the project
 export MY_URL="https://sourceforge.net/projects/piwebcam"
+# URL with the latest version available
+MY_UPDATES_URL="https://sourceforge.net/projects/piwebcam/files/last_version.txt/download"
 # location of the configuration file
 MY_CONFIG="$MY_DIR/$MY_NAME.conf"
 # bootstrap style of the main panel of the web interface
@@ -1668,11 +1670,7 @@ if [ "$1" = "status" ]; then
 	echo "DISK_CACHE="`df |grep '/$'|awk '{print $5}'|sed 's/%//'`
 	echo "DISK_DATA="`df |grep "$DATA_MOUNT_POINT"|awk '{print $5}'|sed 's/%//'`
 	if [[ $NETWORK_INTERNET == "1" ]]; then
-		RSS=`curl $MY_URL/rss?path=/ 2>/dev/null`
-		ITEM=`echo $RSS| grep -Po '<item>.+<item>'`
-		LAST_VERSION=`echo $ITEM| sed -E 's/.*<title><!\[CDATA\[\/v([^\/]+).*$/\1/'`
-		LAST_VERSION_PUBLISHED=`echo $ITEM| sed -E 's/^.*<pubDate>([^>]+)<\/pubDate>.+$/\1/'`
-		LAST_VERSION_LINK=`echo $ITEM| sed -E 's/^.*<link>([^>]+)<\/link>.+$/\1/'`
+		source <(wget -O - $MY_UPDATES_URL 2>/dev/null)
 	fi
 	echo "LAST_VERSION=$LAST_VERSION"
 	echo "LAST_VERSION_PUBLISHED=$LAST_VERSION_PUBLISHED"
