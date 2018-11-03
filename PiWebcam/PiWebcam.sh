@@ -378,7 +378,7 @@ function save_config {
 		AI_ENABLE=0
 	fi
 	if [[ -z "$AI_KEEP_NOT_FOUND" ]]; then
-		AI_KEEP_NOT_FOUND=0
+		AI_KEEP_NOT_FOUND=1
 	fi
 	if [[ -z "$EMAIL_ENABLE" ]]; then
 		EMAIL_ENABLE=0
@@ -451,7 +451,7 @@ AI_TOKEN='$AI_TOKEN'
 AI_OBJECT='$AI_OBJECT'
 # The probability threshold for the ojbect to trigger the notification (e.g. 0.9)
 AI_THRESHOLD='$AI_THRESHOLD'
-# If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives (default: unchecked)
+# If checked motion pictures and videos without the object will be kept (but not notified), otherwise they will be deleted as false positives (default: checked)
 AI_KEEP_NOT_FOUND='$AI_KEEP_NOT_FOUND'
 
 # When a motion is detected, the snapshot is attached to an e-mail message and sent to the configured recipients
@@ -1723,11 +1723,11 @@ FILEIN
 						# do not notify
 						NOTIFY=0
 						DIR_NAME=`dirname $FILENAME`
-						EVENT_NUMBER=`basename $FILENAME | cut -d'-' -f1`
+						EVENT_NUMBER=`basename $FILENAME|cut -d'.' -f1 | rev | cut -d'_' -f 1 | rev`
 						if [[ $AI_KEEP_NOT_FOUND != "1" ]]; then
 							# remove both the picture and the video of the recorded motion
-							rm -f $DIR_NAME/${EVENT_NUMBER}-*
-							rm -f $DIR_NAME/video/${EVENT_NUMBER}-*
+							rm -f $DIR_NAME/*_${EVENT_NUMBER}.*
+							rm -f $DIR_NAME/video/*_${EVENT_NUMBER}.*
 							# remove the directory if empty
 							rmdir $DIR_NAME/video 2>/dev/null
 							rmdir $DIR_NAME 2>/dev/null
@@ -1736,8 +1736,8 @@ FILEIN
 							DISCARDED_DIR=`dirname $DIR_NAME`"/_discarded"
 							mkdir -p $DISCARDED_DIR
 							mkdir -p $DISCARDED_DIR/video
-							mv $DIR_NAME/${EVENT_NUMBER}-* $DISCARDED_DIR
-							mv $DIR_NAME/video/${EVENT_NUMBER}-* $DISCARDED_DIR/video
+							mv $DIR_NAME/*_${EVENT_NUMBER}.* $DISCARDED_DIR
+							mv $DIR_NAME/video/*_${EVENT_NUMBER}.* $DISCARDED_DIR/video
 							# remove the directory if empty
 							rmdir $DIR_NAME/video 2>/dev/null
 							rmdir $DIR_NAME 2>/dev/null

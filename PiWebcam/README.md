@@ -562,7 +562,7 @@ Raspberry Camera Night Vision Wide Angle  | $13 | https://www.aliexpress.com/ite
 * Instructables: https://www.instructables.com/id/Fully-featured-Outdoor-Security-Camera-Based-on-Ra/
 
 ## Changelog
-* v1.2:
+* v1.2 (Build 080eedc):
 	* Fixed a bug preventing notifications from being sent
 	* Fixed a bug preventing logs from being generated
 	* Fixed a bug causing the AP to result unreachable after a passphrase change

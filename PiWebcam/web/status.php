@@ -154,7 +154,7 @@
 															if ($status["LAST_VERSION"] == "") {
 																print "Unable to check for updates";
 															}
-															else if (floatval($status["LAST_VERSION"]) > floatval($env["MY_VERSION"])) {
+															else if ($status["LAST_VERSION"] != $env["MY_VERSION"]) {
 																print 'v'.$status["LAST_VERSION"].' - published on '.$status["LAST_VERSION_PUBLISHED"];
 																print '<br><br>';
 																print '<form id="form" method="POST" role="form">';
