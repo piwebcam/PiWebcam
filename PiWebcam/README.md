@@ -37,9 +37,10 @@ Main features include:
 
 Installing PiWecam would require a fresh installation of Raspbian and a SD card. Please do not re-use an existing installation but start from scratch as listed below:
 
-* Download Raspbian Stretch Lite operating system (<https://www.raspberrypi.org/downloads/raspbian/>)
+* Download Raspbian Stretch Lite operating system (<http://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2019-04-09/2019-04-08-raspbian-stretch-lite.zip>)
+* Unzip the image
 * Write the image to a SD card (<https://www.raspberrypi.org/documentation/installation/installing-images/>)
-* Download the latest release of PiWebcam from https://sourceforge.net/projects/piwebcam/files/
+* Download the latest release of PiWebcam from https://github.com/user2684/PiWebcam/releases
 * Extract and copy the `PiWebcam` directory into the boot partition (on Windows, the only one accessible)
 * For a headless setup, review https://www.raspberrypi.org/documentation/configuration/wireless/headless.md
 * Plug the SD card on your Raspberry Pi, power it on and connect to it through SSH (Hostname: raspberrypi.local, Username: pi, Password: raspberry)
@@ -181,7 +182,7 @@ Motion detection is based on the excellent **Motion Project software** (<https:/
 When a motion is detected, PiWebcam.sh is invoked with the "*notify*" parameter through the *on_picture_save*/*on_movie_end* motion's event. 
 If object detection is enabled for further analyzing the image, the picture is sent to Clarifai (<https://clarifai.com/>) to **recognize all the objects** within the image. This would work great to lower down false positives e.g. if you are interested to know if there is somebody stealing in your house and not just a sudden light change. **For the security camera use case, Clarifai seems to fit best** since pretty accurate to identify objects and people whereas other services could be integrated in the future (Google Vision works great with landscapes but poorly to identify a person, Amazon Rekognition is accurate but prone to false negatives when identifying persons and its authentication schema is complex to integrate in a bash script). If the AI service cannot be reached, the analysis is queue for when the connection is restored. In case of a false positive (e.g. there are no people in the motion picture), by default both the motion picture and video are deleted and no notification is sent.
 
-After that, PiWebcam check if an Internet connection is available and if so, sends out the notification. In addition to traditional e-mail notifications, sent out with *ssmtp*, with the detected motion picture attached, PiWebcam can also upload the same picture to a **Slack channel**. If you don't know Slack, check it out (<https://slack.com/>); it is a great collaboration tool but can also be used to create a group dedicated to your family, grant access to your family members, chat with them and allow PiWebcam or Home Automation utilities  (like e.g. http://my-house.sourceforge.io) to post updates over there.
+After that, PiWebcam check if an Internet connection is available and if so, sends out the notification. In addition to traditional e-mail notifications, sent out with *ssmtp*, with the detected motion picture attached, PiWebcam can also upload the same picture to a **Slack channel**. If you don't know Slack, check it out (<https://slack.com/>); it is a great collaboration tool but can also be used to create a group dedicated to your family, grant access to your family members, chat with them and allow PiWebcam or Home Automation utilities (like e.g. https://www.egeoffrey.com) to post updates over there.
 If there is **no Internet connection, the notification does not get lost** but it is **queued and sent out when the connection is restored**.
 
 Periodically, through cron, PiWebcam.sh is called with the "*checkup*" parameter which will **perform routine tasks to ensure the system is running smoothly**. It will reboot the device if the overlayed root filesystem is almost full (even if this shouldn't happen), **remove oldest pictures and movies** from the data directory when the data filesystem fills up, process the notification queue, **restart core services** if no more running and try reconnecting to the network when disconnected.
@@ -556,34 +557,7 @@ Raspberry Camera Night Vision Wide Angle  | $13 | https://www.aliexpress.com/ite
 
 # About this project
 
-* Project Page: http://piwebcam.sourceforge.io
-* User Manual: https://sourceforge.net/p/piwebcam/wiki
-* Bug Report: https://sourceforge.net/p/piwebcam/tickets
+* Project Page: https://github.com/user2684/PiWebcam
+* User Manual: https://github.com/user2684/PiWebcam/wiki
+* Bug Report: https://github.com/user2684/PiWebcam/issues
 * Instructables: https://www.instructables.com/id/Fully-featured-Outdoor-Security-Camera-Based-on-Ra/
-
-## Changelog
-* v1.2 (Build 080eedc):
-	* Fixed a bug preventing notifications from being sent
-	* Fixed a bug preventing logs from being generated
-	* Fixed a bug causing the AP to result unreachable after a passphrase change
-	* The device now reboots after importing a new configuration
-	* Improved image quality and motion detection when switching between day and night
-	* Default framerate set to 2 to limit CPU utilization
-* v1.1:
-	* Added support for object detection and automatic image analysis through artificial intelligence models
-	* Added support for night vision and management of an IR Cut filter and IR Leds
-	* Added configurable camera framerate and motion event gap settings to the web interface
-	* Added functionality to check for updates, download and install them automatically
-	* Added option to disable (turn off) the power led of the board
-	* PiWebcam logs now accessible from the web interface
-	* Added option to notify the full movie instead of just the snapshot of the motion
-	* Added option to delete all the user's data but keeping the configuration ("Data Reset")
-	* Quicker startup and more robust shutdown/reboot processes
-	* Enhanced the upgrade routine
-	* The previous version is backed up during an upgrade
-	* The refresh interval of the live view can now be adjusted in realtime
-	* New API call "set" replacing all the "set_*" functions
-	* Fixed compatibility issues between Raspberry Pi Model 3 and Zero W
-	* Other minor fixes
-* v1.0:
-    * First Release

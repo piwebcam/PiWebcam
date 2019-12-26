@@ -6,7 +6,7 @@
 # | |   | \  /\  /  __/ |_) | (_| (_| | | | | | |
 # \_|   |_|\/  \/ \___|_.__/ \___\__,_|_| |_| |_|
 # 
-# http://piwebcam.sourceforge.io
+# https://github.com/user2684/PiWebcam
 
 # ensure we are running on a supported Raspbian release
 if ! grep -q '9 (stretch)' /etc/os-release; then
@@ -30,9 +30,9 @@ export MY_FILE="$MY_DIR/$MY_NAME.sh"
 export MY_VERSION="1.2"
 export MY_BUILD=`md5sum $MY_FILE 2>/dev/null |cut -f1 -d' '|tail -c 8`
 # URL of the project
-export MY_URL="https://sourceforge.net/projects/piwebcam"
+export MY_URL="https://github.com/user2684/PiWebcam"
 # URL with the latest version available
-MY_UPDATES_URL="https://sourceforge.net/projects/piwebcam/files/last_version.txt/download"
+MY_UPDATES_URL="https://raw.githubusercontent.com/wiki/user2684/PiWebcam/last_version.md"
 # location of the configuration file
 MY_CONFIG="$MY_DIR/$MY_NAME.conf"
 # bootstrap style of the main panel of the web interface
@@ -182,15 +182,16 @@ function append {
 
 # return true if the filesystem utilization is above a given threshold ($1: mount point, $2: threshold)
 function filesystem_full {
-	if [[ -n "$1" && -n "$2" ]]; then
-		local PERCENTAGE_USED=`df |grep "${1}$"|awk '{print $5}'|sed 's/%//'`
-		if [[ -n $PERCENTAGE_USED && $PERCENTAGE_USED -ge $2 ]]; then 
-			true
-		else
-			false
-		fi
-	fi
-	false
+    if [[ -n "$1" && -n "$2" ]]; then
+        local PERCENTAGE_USED=`df |grep "${1}$"|awk '{print $5}'|sed 's/%//'`
+        if [[ -n $PERCENTAGE_USED && $PERCENTAGE_USED -ge $2 ]]; then 
+            true
+        else
+            false
+        fi
+    else
+        false
+    fi
 }
 
 # stop all the services
@@ -1185,6 +1186,7 @@ function configure_network {
 		echo "    nohook wpa_supplicant" >> $NETWORK_CONFIG
 		restart_network
 		# enable and start the services
+        systemctl unmask hostapd
 		systemctl enable hostapd
 		systemctl enable dnsmasq
 		systemctl stop hostapd
