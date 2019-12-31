@@ -6,7 +6,7 @@
 # | |   | \  /\  /  __/ |_) | (_| (_| | | | | | |
 # \_|   |_|\/  \/ \___|_.__/ \___\__,_|_| |_| |_|
 # 
-# https://github.com/user2684/PiWebcam
+# http://piwebcam.github.io
 
 # ensure we are running on a supported Raspbian release
 if ! grep -q '9 (stretch)' /etc/os-release; then
@@ -27,12 +27,12 @@ export MY_NAME="PiWebcam"
 export MY_DIR="/boot/$MY_NAME"
 export MY_FILE="$MY_DIR/$MY_NAME.sh"
 # version and build number
-export MY_VERSION="1.2"
+export MY_VERSION="1.3"
 export MY_BUILD=`md5sum $MY_FILE 2>/dev/null |cut -f1 -d' '|tail -c 8`
 # URL of the project
-export MY_URL="https://github.com/user2684/PiWebcam"
+export MY_URL="http://piwebcam.github.io"
 # URL with the latest version available
-MY_UPDATES_URL="https://raw.githubusercontent.com/wiki/user2684/PiWebcam/last_version.md"
+MY_UPDATES_URL="https://raw.githubusercontent.com/wiki/PiWebcam/piwebcam/last_version.md"
 # location of the configuration file
 MY_CONFIG="$MY_DIR/$MY_NAME.conf"
 # bootstrap style of the main panel of the web interface
